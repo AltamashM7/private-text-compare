@@ -1,0 +1,66 @@
+name: Project verification
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check committed PR diff whitespace
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          git diff --check "${BASE_SHA}...${HEAD_SHA}"
+
+      - name: Check committed push diff whitespace
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${BEFORE_SHA}" =~ ^0+$ ]]; then
+            EMPTY_TREE="$(git hash-object -t tree /dev/null)"
+            git diff --check "${EMPTY_TREE}" "${AFTER_SHA}"
+          else
+            git cat-file -e "${BEFORE_SHA}^{commit}"
+            git cat-file -e "${AFTER_SHA}^{commit}"
+            git diff --check "${BEFORE_SHA}" "${AFTER_SHA}"
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check Astro and TypeScript
+        run: npm run check
+
+      - name: Build static production output
+        run: npm run build
