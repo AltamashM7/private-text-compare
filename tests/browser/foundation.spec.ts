@@ -1,4 +1,3 @@
-import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 const screenshots = [
@@ -41,7 +40,6 @@ for (const viewport of screenshots) {
     expect(pageErrors, `Unexpected page errors: ${pageErrors.join(' | ')}`).toEqual([]);
     expect(consoleErrors, `Unexpected console errors: ${consoleErrors.join(' | ')}`).toEqual([]);
 
-    await mkdir('artifacts/screenshots', { recursive: true });
     await page.screenshot({
       path: `artifacts/screenshots/${viewport.name}`,
       fullPage: true,
