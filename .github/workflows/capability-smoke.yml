@@ -1,0 +1,28 @@
+name: Phase 0B Capability Smoke Test
+
+on:
+  push:
+    branches:
+      - phase-0b/capability-smoke-test
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Capability smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Emit capability markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PHASE_0B_ACTIONS_EXECUTION_OK"
+          echo "event=${GITHUB_EVENT_NAME}"
+          echo "ref=${GITHUB_REF}"
+          echo "sha=${GITHUB_SHA}"
