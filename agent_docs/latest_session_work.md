@@ -1,25 +1,35 @@
 # Latest session work
 
-Phase 0C established the cloud-native project foundation on `bootstrap/project-foundation` and opened Draft PR #2.
+## Phase 0D handoff
 
-## Changed
+Phase 0D adds browser-level QA infrastructure only; the Private Text Compare product interface remains unimplemented.
 
-- Added Astro static output with strict TypeScript.
-- Added Preact integration without adding a hydrated demonstration component.
-- Added Tailwind CSS 4 through `@tailwindcss/vite`.
-- Established the framework-independent `src/core/` boundary.
-- Added concise project, architecture, decision, progress, and Builder-operation documentation.
-- Generated `package-lock.json` with npm in a temporary GitHub Actions workflow, validated it in the same run, then removed that workflow.
-- Installed permanent read-only CI for committed-diff whitespace verification, locked dependency installation, Astro/TypeScript checking, and static production builds.
+### Changed
 
-## Verification
+- Added exact `@playwright/test` dependency and a `test:browser` script.
+- Added Chromium-only Playwright configuration against the built Astro preview server on `127.0.0.1:4321`.
+- Added browser foundation smoke coverage for title/content, uncaught page errors, console errors, horizontal overflow, and five responsive viewports.
+- Added five full-page responsive screenshots under the CI-only `artifacts/screenshots/` path.
+- Updated permanent read-only GitHub Actions CI with a `Browser QA` job after normal project verification.
+- Added pinned `actions/upload-artifact` upload of `browser-qa-screenshots` with 14-day retention.
+- Updated durable QA architecture/decision/progress documentation.
+- Updated the npm lockfile through the temporary write-enabled GitHub Actions bootstrap, then removed that temporary workflow.
 
-The temporary bootstrap run reported `Contents: write`, generated and committed the npm lockfile, and passed `npm ci`, `npm run check`, and `npm run build`. Permanent PR CI is green and validates the real PR base-to-head committed diff rather than the synthetic merge ref.
+### Verification performed
 
-## Handoff
+The implementation-head PR run `31951081447` succeeded: normal project verification passed; Chromium installation passed; the static build passed; all five Playwright tests passed; and artifact `browser-qa-screenshots` (ID `9264665221`) uploaded exactly five PNG files. The artifact ZIP manifest was checked for the required filenames, but visual screenshot acceptance is intentionally left to the Orchestrator.
 
-- Feature branch: `bootstrap/project-foundation`
-- Draft PR: #2
-- Current CI result: successful project verification; this documentation synchronization is expected to run the same read-only PR checks again.
-- Immediate next step: Orchestrator independently reviews the PR diff, dependency set, commit history, and CI logs.
-- Cautions: do not merge without explicit Orchestrator approval; product logic, product UI, Cloudflare, deployment, analytics, advertising, backend, accounts, and authentication remain out of scope.
+### Current branch / PR
+
+- Branch: `phase-0d/browser-qa-artifacts`
+- Draft PR: #3 — `Phase 0D: add browser QA and screenshot artifacts`
+
+### Immediate next step
+
+Orchestrator independently reviews the final PR diff, final-head CI, and downloads/opens the screenshot artifact for visual desktop/tablet/mobile inspection before deciding Phase 0D acceptance.
+
+### Important cautions
+
+- Do not merge without explicit Orchestrator approval.
+- Cloudflare/deployment remains deferred to Phase 0E.
+- Product comparison logic/UI, Vitest, analytics, advertising, backend, and authentication remain out of scope and unimplemented.
