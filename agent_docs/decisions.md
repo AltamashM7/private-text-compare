@@ -29,3 +29,7 @@
 - **D027 — Product typography uses self-hosted Geist Sans and Geist Mono from a pinned upstream release.** The two variable WOFF2 assets come from official `vercel/geist-font` tag `v1.7.1`, are served same-origin, and create no third-party runtime font request.
 - **D028 — The ambient page background uses a static CSS technical-canvas system instead of a uniform graph-paper repeat.** A minor grid, a major grid at four minor cells, aligned major-intersection nodes, restrained illumination, and spatial fading create the approved structure.
 - **D029 — Decorative canvas treatment remains non-interactive, theme-aware, and subordinate to editor surfaces.** It uses pseudo-elements and CSS only, with no runtime JavaScript renderer, image/SVG background asset, canvas element, or animation.
+- **D030 — Export serialization consumes project-owned `ComparisonResult`.** It does not rerun JsDiff or implement a second comparison algorithm, so exported output reflects the active comparison semantics, including ignore options.
+- **D031 — Copy and file export are explicit local browser actions.** Export payloads are not persisted, transmitted, logged, or included in URLs; clipboard access is write-only and user initiated.
+- **D032 — Stale results are not exportable.** Editing inputs or comparison options after Compare disables Copy/Export until the comparison is refreshed.
+- **D033 — Phase 1C export formats are deterministic.** Unified-diff and plain-text report outputs use fixed non-sensitive filenames and contain no timestamps or inferred document names.
