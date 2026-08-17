@@ -13,16 +13,27 @@ const {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+    <script is:inline>
+      (() => {
+        const key = 'private-text-compare-theme';
+        let theme = 'dark';
+        try {
+          const saved = localStorage.getItem(key);
+          if (saved === 'light' || saved === 'dark') theme = saved;
+        } catch {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <title>{title}</title>
   </head>
-  <body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
-    <main class="mx-auto min-h-screen w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+  <body>
+    <main class="site-shell">
       <slot />
     </main>
   </body>

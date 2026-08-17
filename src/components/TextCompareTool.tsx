@@ -8,25 +8,14 @@ import type {
 
 const INITIAL_RESULT_MESSAGE = 'Add text above and press Compare to see the differences.';
 
-const ROW_STYLES: Record<ComparisonRow['kind'], string> = {
-  unchanged: 'border-slate-200 bg-white',
-  changed: 'border-amber-200 bg-amber-50/50',
-  added: 'border-emerald-200 bg-emerald-50/50',
-  removed: 'border-rose-200 bg-rose-50/50',
-};
-
-const BADGE_STYLES: Record<ComparisonRow['kind'], string> = {
-  unchanged: 'border-slate-200 bg-slate-100 text-slate-700',
-  changed: 'border-amber-300 bg-amber-100 text-amber-900',
-  added: 'border-emerald-300 bg-emerald-100 text-emerald-900',
-  removed: 'border-rose-300 bg-rose-100 text-rose-900',
-};
-
-const ROW_LABELS: Record<ComparisonRow['kind'], string> = {
-  unchanged: 'Unchanged',
-  changed: 'Changed',
-  added: 'Added',
-  removed: 'Removed',
+const ROW_META: Record<
+  ComparisonRow['kind'],
+  { label: string; symbol: string }
+> = {
+  unchanged: { label: 'Unchanged', symbol: '=' },
+  changed: { label: 'Changed', symbol: '~' },
+  added: { label: 'Added', symbol: '+' },
+  removed: { label: 'Removed', symbol: '−' },
 };
 
 interface LineCellProps {
@@ -34,7 +23,7 @@ interface LineCellProps {
   lineNumber?: number;
   text?: string;
   segments?: InlineSegment[];
-  emptyLabel?: string;
+  emptyLabel: string;
 }
 
 function InlineText({ segments }: { segments: InlineSegment[] }) {
@@ -45,11 +34,7 @@ function InlineText({ segments }: { segments: InlineSegment[] }) {
 
         if (segment.kind === 'removed') {
           return (
-            <del
-              key={key}
-              data-inline-kind="removed"
-              class="bg-rose-200/80 text-rose-950 decoration-rose-700 decoration-2"
-            >
+            <del key={key} data-inline-kind="removed" class="diff-inline diff-inline--removed">
               {segment.text}
             </del>
           );
@@ -57,11 +42,7 @@ function InlineText({ segments }: { segments: InlineSegment[] }) {
 
         if (segment.kind === 'added') {
           return (
-            <ins
-              key={key}
-              data-inline-kind="added"
-              class="bg-emerald-200/80 text-emerald-950 no-underline ring-1 ring-inset ring-emerald-300/70"
-            >
+            <ins key={key} data-inline-kind="added" class="diff-inline diff-inline--added">
               {segment.text}
             </ins>
           );
@@ -74,27 +55,24 @@ function InlineText({ segments }: { segments: InlineSegment[] }) {
 }
 
 function LineCell({ side, lineNumber, text, segments, emptyLabel }: LineCellProps) {
+  const sideClass = side === 'Original' ? 'original' : 'changed';
+
   return (
-    <div class="min-w-0 border-t border-slate-200 first:border-t-0 md:border-t-0 md:first:border-t-0 md:first:border-r">
-      <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-        <span>{side}</span>
+    <div class={`diff-cell diff-cell--${sideClass}${text === undefined ? ' diff-cell--empty' : ''}`}>
+      <div class="diff-line-meta">
+        <span class="diff-mobile-side">{side}</span>
         {lineNumber !== undefined ? (
-          <span aria-label={`${side} line ${lineNumber}`} class="font-mono tabular-nums text-slate-500">
-            Line {lineNumber}
+          <span aria-label={`${side} line ${lineNumber}`} class="diff-line-number">
+            {lineNumber}
           </span>
         ) : (
-          <span aria-hidden="true" class="h-4" />
+          <span aria-hidden="true" class="diff-line-number diff-line-number--empty">—</span>
         )}
       </div>
       {text !== undefined ? (
-        <pre class="diff-text min-h-12 m-0 px-3 py-3 font-mono text-sm leading-6 text-slate-900">
-          {segments ? <InlineText segments={segments} /> : text}
-        </pre>
+        <pre class="diff-text">{segments ? <InlineText segments={segments} /> : text}</pre>
       ) : (
-        <div
-          class="min-h-12 bg-slate-100/70 px-3 py-3"
-          aria-label={emptyLabel}
-        >
+        <div class="diff-empty" aria-label={emptyLabel}>
           <span class="sr-only">{emptyLabel}</span>
         </div>
       )}
@@ -103,52 +81,47 @@ function LineCell({ side, lineNumber, text, segments, emptyLabel }: LineCellProp
 }
 
 function ComparisonRowView({ row }: { row: ComparisonRow }) {
-  const originalLineNumber =
-    row.kind === 'added' ? undefined : row.originalLineNumber;
-  const changedLineNumber =
-    row.kind === 'removed' ? undefined : row.changedLineNumber;
+  const originalLineNumber = row.kind === 'added' ? undefined : row.originalLineNumber;
+  const changedLineNumber = row.kind === 'removed' ? undefined : row.changedLineNumber;
   const originalText = row.kind === 'added' ? undefined : row.originalText;
   const changedText = row.kind === 'removed' ? undefined : row.changedText;
+  const meta = ROW_META[row.kind];
 
   return (
     <article
       data-row-kind={row.kind}
-      class={`overflow-hidden rounded-xl border ${ROW_STYLES[row.kind]}`}
-      aria-label={`${ROW_LABELS[row.kind]} comparison row`}
+      class={`diff-row diff-row--${row.kind}`}
+      aria-label={`${meta.label} comparison row`}
     >
-      <div class="flex items-center justify-between gap-3 border-b border-slate-200/80 px-3 py-2">
-        <span
-          class={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${BADGE_STYLES[row.kind]}`}
-        >
-          {row.kind === 'added' ? '+' : row.kind === 'removed' ? '−' : row.kind === 'changed' ? '↔' : '✓'}
-          <span class="ml-1.5">{ROW_LABELS[row.kind]}</span>
-        </span>
+      <div class="diff-row-status" aria-hidden="true">
+        <span class="diff-row-symbol">{meta.symbol}</span>
+        <span class="diff-row-status-text">{meta.label}</span>
       </div>
-      <div class="grid md:grid-cols-2">
-        <LineCell
-          side="Original"
-          lineNumber={originalLineNumber}
-          text={originalText}
-          segments={row.kind === 'changed' ? row.originalSegments : undefined}
-          emptyLabel="No corresponding original line"
-        />
-        <LineCell
-          side="Changed"
-          lineNumber={changedLineNumber}
-          text={changedText}
-          segments={row.kind === 'changed' ? row.changedSegments : undefined}
-          emptyLabel="No corresponding changed line"
-        />
-      </div>
+      <LineCell
+        side="Original"
+        lineNumber={originalLineNumber}
+        text={originalText}
+        segments={row.kind === 'changed' ? row.originalSegments : undefined}
+        emptyLabel="No corresponding original line"
+      />
+      <LineCell
+        side="Changed"
+        lineNumber={changedLineNumber}
+        text={changedText}
+        segments={row.kind === 'changed' ? row.changedSegments : undefined}
+        emptyLabel="No corresponding changed line"
+      />
     </article>
   );
 }
 
-function StatPill({ label, value, tone }: { label: string; value: number; tone: string }) {
+function ResultStats({ result }: { result: ComparisonResult }) {
   return (
-    <div class={`rounded-xl border px-3 py-2 ${tone}`}>
-      <div class="text-xs font-semibold uppercase tracking-[0.1em]">{label}</div>
-      <div class="mt-1 text-xl font-bold tabular-nums">{value}</div>
+    <div class="result-stats" aria-label="Comparison statistics">
+      <span><strong>{result.stats.unchangedLineCount}</strong> unchanged</span>
+      <span class="stat-changed"><strong>{result.stats.changedRowCount}</strong> changed</span>
+      <span class="stat-added"><strong>{result.stats.addedLineCount}</strong> added</span>
+      <span class="stat-removed"><strong>{result.stats.removedLineCount}</strong> removed</span>
     </div>
   );
 }
@@ -198,47 +171,16 @@ export default function TextCompareTool() {
   };
 
   return (
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
-      <div class="border-b border-slate-200 px-4 py-4 sm:px-6">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-950">Compare text</h2>
-            <p class="mt-1 text-sm leading-6 text-slate-600">
-              Paste two versions, choose how differences should be treated, then compare when you are ready.
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-2" aria-label="Comparison actions">
-            <button
-              type="button"
-              onClick={swapInputs}
-              class="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Swap
-            </button>
-            <button
-              type="button"
-              onClick={clearComparison}
-              class="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={runComparison}
-              class="min-h-11 rounded-lg bg-indigo-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Compare
-            </button>
-          </div>
-        </div>
-      </div>
+    <div class="compare-tool">
+      <section class="compare-workspace" aria-labelledby="comparison-workspace-heading">
+        <h2 id="comparison-workspace-heading" class="sr-only">Text comparison workspace</h2>
 
-      <div class="p-4 sm:p-6">
-        <div class="grid gap-4 lg:grid-cols-2">
-          <div class="min-w-0">
-            <label for="original-text" class="mb-2 block text-sm font-semibold text-slate-900">
-              Original
-            </label>
+        <div class="editor-grid">
+          <div class="editor-pane">
+            <div class="editor-heading">
+              <label for="original-text">Original</label>
+              <span aria-hidden="true">A</span>
+            </div>
             <textarea
               id="original-text"
               value={originalText}
@@ -248,13 +190,15 @@ export default function TextCompareTool() {
               }}
               placeholder="Paste the original text here…"
               spellcheck={false}
-              class="min-h-52 w-full resize-y rounded-xl border border-slate-300 bg-slate-50/50 px-3.5 py-3 font-mono text-sm leading-6 text-slate-950 shadow-inner shadow-slate-900/[0.02] placeholder:text-slate-400 focus:border-indigo-600 focus:bg-white focus:outline-3 focus:outline-offset-1 focus:outline-indigo-200"
+              class="editor-textarea"
             />
           </div>
-          <div class="min-w-0">
-            <label for="changed-text" class="mb-2 block text-sm font-semibold text-slate-900">
-              Changed
-            </label>
+
+          <div class="editor-pane">
+            <div class="editor-heading">
+              <label for="changed-text">Changed</label>
+              <span aria-hidden="true">B</span>
+            </div>
             <textarea
               id="changed-text"
               value={changedText}
@@ -264,15 +208,15 @@ export default function TextCompareTool() {
               }}
               placeholder="Paste the changed text here…"
               spellcheck={false}
-              class="min-h-52 w-full resize-y rounded-xl border border-slate-300 bg-slate-50/50 px-3.5 py-3 font-mono text-sm leading-6 text-slate-950 shadow-inner shadow-slate-900/[0.02] placeholder:text-slate-400 focus:border-indigo-600 focus:bg-white focus:outline-3 focus:outline-offset-1 focus:outline-indigo-200"
+              class="editor-textarea"
             />
           </div>
         </div>
 
-        <fieldset class="mt-5">
-          <legend class="text-sm font-semibold text-slate-900">Comparison options</legend>
-          <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-5">
-            <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-1 text-sm text-slate-700">
+        <div class="workspace-toolbar">
+          <fieldset class="comparison-options">
+            <legend class="sr-only">Comparison options</legend>
+            <label class="option-control">
               <input
                 type="checkbox"
                 checked={ignoreCase}
@@ -280,11 +224,10 @@ export default function TextCompareTool() {
                   setIgnoreCase(event.currentTarget.checked);
                   markResultStale();
                 }}
-                class="h-5 w-5 rounded border-slate-300 text-indigo-700 accent-indigo-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               />
               <span>Ignore case</span>
             </label>
-            <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-1 text-sm text-slate-700">
+            <label class="option-control">
               <input
                 type="checkbox"
                 checked={ignoreSurroundingWhitespace}
@@ -292,71 +235,72 @@ export default function TextCompareTool() {
                   setIgnoreSurroundingWhitespace(event.currentTarget.checked);
                   markResultStale();
                 }}
-                class="h-5 w-5 rounded border-slate-300 text-indigo-700 accent-indigo-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               />
               <span>Ignore surrounding whitespace</span>
             </label>
+          </fieldset>
+
+          <div class="workspace-actions" aria-label="Comparison actions">
+            <button type="button" onClick={swapInputs} class="button button--secondary">Swap</button>
+            <button type="button" onClick={clearComparison} class="button button--secondary">Clear</button>
+            <button type="button" onClick={runComparison} class="button button--primary">Compare</button>
           </div>
-        </fieldset>
-      </div>
+        </div>
+      </section>
 
       <section
-        class="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-6"
+        class="results-panel"
         aria-labelledby="comparison-results-heading"
         data-result-state={result === null ? 'empty' : stale ? 'stale' : 'current'}
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 id="comparison-results-heading" class="text-lg font-semibold text-slate-950">
-              Comparison result
-            </h2>
-            <p role="status" aria-live="polite" aria-atomic="true" class="mt-1 text-sm text-slate-600">
-              {announcement}
-            </p>
+        <header class="results-header">
+          <div class="results-heading-row">
+            <div>
+              <p class="section-kicker">Diff</p>
+              <h2 id="comparison-results-heading">Comparison result</h2>
+            </div>
+            {result !== null ? <ResultStats result={result} /> : null}
           </div>
+
+          <p role="status" aria-live="polite" aria-atomic="true" class="result-status">
+            {announcement}
+          </p>
+
           {result !== null ? (
-            <div class="flex flex-wrap gap-2 text-xs font-medium text-slate-600" aria-label="Result legend">
-              <span class="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-amber-900">Changed</span>
-              <span class="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-emerald-900">Added</span>
-              <span class="rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-rose-900">Removed</span>
+            <div class="result-meta-row">
+              <p class="result-line-counts">
+                Original: {result.stats.originalLineCount} lines · Changed: {result.stats.changedLineCount} lines
+              </p>
+              <div class="result-legend" aria-label="Result legend">
+                <span><b>~</b> Changed</span>
+                <span><b>+</b> Added</span>
+                <span><b>−</b> Removed</span>
+              </div>
             </div>
           ) : null}
-        </div>
+        </header>
 
         {stale ? (
-          <div class="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">
-            Inputs changed — compare again to refresh the result.
-          </div>
+          <div class="stale-notice">Inputs changed — compare again to refresh the result.</div>
         ) : null}
 
         {result === null ? (
-          <div class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-600">
-            {INITIAL_RESULT_MESSAGE}
-          </div>
+          <div class="result-empty">{INITIAL_RESULT_MESSAGE}</div>
+        ) : result.rows.length === 0 ? (
+          <div class="result-empty">No lines to compare.</div>
         ) : (
-          <>
-            <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatPill label="Unchanged" value={result.stats.unchangedLineCount} tone="border-slate-200 bg-white text-slate-800" />
-              <StatPill label="Changed" value={result.stats.changedRowCount} tone="border-amber-200 bg-amber-50 text-amber-950" />
-              <StatPill label="Added" value={result.stats.addedLineCount} tone="border-emerald-200 bg-emerald-50 text-emerald-950" />
-              <StatPill label="Removed" value={result.stats.removedLineCount} tone="border-rose-200 bg-rose-50 text-rose-950" />
+          <div class="diff-editor" aria-label="Line comparison rows">
+            <div class="diff-column-headings" aria-hidden="true">
+              <span />
+              <span>Original</span>
+              <span>Changed</span>
             </div>
-            <p class="mt-2 text-xs text-slate-500">
-              Original: {result.stats.originalLineCount} lines · Changed: {result.stats.changedLineCount} lines
-            </p>
-
-            {result.rows.length === 0 ? (
-              <div class="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
-                No lines to compare.
-              </div>
-            ) : (
-              <div class="mt-5 space-y-3" aria-label="Line comparison rows">
-                {result.rows.map((row, index) => (
-                  <ComparisonRowView row={row} key={`${row.kind}-${index}`} />
-                ))}
-              </div>
-            )}
-          </>
+            <div class="diff-rows">
+              {result.rows.map((row, index) => (
+                <ComparisonRowView row={row} key={`${row.kind}-${index}`} />
+              ))}
+            </div>
+          </div>
         )}
       </section>
     </div>
