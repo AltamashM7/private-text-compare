@@ -140,14 +140,22 @@ jobs:
           if [[ -z "$PROJECT_JSON" ]]; then
             echo "Cloudflare Pages project private-text-compare is absent; creating Direct Upload project."
             npx wrangler pages project create private-text-compare --production-branch main
-            PROJECTS_JSON="$(npx wrangler pages project list --json)"
-            PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(.name == "private-text-compare")' | head -n 1)"
+
+            for attempt in 1 2 3 4 5 6; do
+              PROJECTS_JSON="$(npx wrangler pages project list --json)"
+              PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(.name == "private-text-compare")' | head -n 1)"
+              if [[ -n "$PROJECT_JSON" ]]; then
+                break
+              fi
+              echo "Pages project re-list attempt $attempt has not observed the new project yet."
+              sleep 3
+            done
           else
             echo "Cloudflare Pages project private-text-compare already exists; not recreating it."
           fi
 
           if [[ -z "$PROJECT_JSON" ]]; then
-            echo "Cloudflare Pages project private-text-compare was not found after inspection/creation." >&2
+            echo "Cloudflare Pages project private-text-compare was not found after bounded inspection/creation retries." >&2
             exit 1
           fi
 
