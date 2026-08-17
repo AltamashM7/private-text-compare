@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from '@playwright/test';
 
 const fixture = {
   original: `The quick brown fox\njumps over the lazy dog.\nKeep this line.\nRemove this line.`,
@@ -47,6 +46,18 @@ const changedInput = (page: Page) => page.getByRole('textbox', { name: 'Changed'
 const copyButton = (page: Page) => page.getByRole('button', { name: /^(Copy diff|Copied)$/ });
 const diffButton = (page: Page) => page.getByRole('button', { name: 'Download .diff' });
 const reportButton = (page: Page) => page.getByRole('button', { name: 'Download .txt' });
+
+async function readDownloadText(download: Download): Promise<string> {
+  const stream = await download.createReadStream();
+  stream.setEncoding('utf8');
+  let content = '';
+
+  for await (const chunk of stream) {
+    content += chunk;
+  }
+
+  return content;
+}
 
 async function openTool(page: Page) {
   const pageErrors: string[] = [];
@@ -149,9 +160,7 @@ test('Download .diff uses the deterministic filename and exact serializer conten
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('private-text-compare.diff');
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  expect(await readFile(path!, 'utf8')).toBe(expectedDiff);
+  expect(await readDownloadText(download)).toBe(expectedDiff);
   await expect(page.getByRole('status')).toHaveText('Unified diff downloaded.');
   await expect(page.locator('[data-result-state="current"]')).toBeVisible();
   await expectOnlyApprovedStorage(page);
@@ -168,9 +177,7 @@ test('Download .txt uses the deterministic filename and exact report content', a
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('private-text-compare-report.txt');
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  expect(await readFile(path!, 'utf8')).toBe(expectedReport);
+  expect(await readDownloadText(download)).toBe(expectedReport);
   await expect(page.getByRole('status')).toHaveText('Text report downloaded.');
   await expect(page.locator('[data-result-state="current"]')).toBeVisible();
   await expectOnlyApprovedStorage(page);
