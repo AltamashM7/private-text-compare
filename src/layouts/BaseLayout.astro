@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '../styles/refinement.css';
 
 interface Props {
   title: string;
@@ -19,6 +20,8 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+    <link rel="preload" href="/fonts/geist/geist-sans-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/geist/geist-mono-variable.woff2" as="font" type="font/woff2" crossorigin />
     <script is:inline>
       (() => {
         const key = 'private-text-compare-theme';

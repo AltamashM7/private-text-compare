@@ -1,0 +1,204 @@
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist/geist-sans-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist/geist-mono-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root,
+html[data-theme="dark"] {
+  --grid-minor: rgba(255, 255, 255, 0.021);
+  --grid-major: rgba(210, 220, 235, 0.052);
+  --grid-node: rgba(205, 218, 238, 0.13);
+  --canvas-glow: rgba(118, 139, 172, 0.07);
+}
+
+html[data-theme="light"] {
+  --grid-minor: rgba(23, 23, 23, 0.022);
+  --grid-major: rgba(55, 62, 72, 0.052);
+  --grid-node: rgba(48, 55, 65, 0.12);
+  --canvas-glow: rgba(255, 255, 255, 0.82);
+}
+
+html {
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--page);
+}
+
+.site-shell {
+  position: relative;
+  isolation: isolate;
+  background: var(--page);
+}
+
+.site-shell::before,
+.site-shell::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.site-shell::before {
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--grid-node) 1px, transparent 1.45px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size: 112px 112px, 112px 112px, 112px 112px, 28px 28px, 28px 28px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 82% 68% at 50% 18%,
+    #000 0%,
+    rgba(0, 0, 0, 0.9) 34%,
+    rgba(0, 0, 0, 0.48) 63%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 82% 68% at 50% 18%,
+    #000 0%,
+    rgba(0, 0, 0, 0.9) 34%,
+    rgba(0, 0, 0, 0.48) 63%,
+    transparent 100%
+  );
+}
+
+.site-shell::after {
+  background: radial-gradient(
+    ellipse 52% 28% at 50% 4%,
+    var(--canvas-glow),
+    transparent 72%
+  );
+}
+
+.page-frame {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-mark {
+  font-weight: 620;
+  letter-spacing: -0.018em;
+}
+
+.section-kicker {
+  font-weight: 620;
+  letter-spacing: 0.105em;
+}
+
+.product-intro h1,
+.results-header h2 {
+  letter-spacing: -0.032em;
+}
+
+.product-intro h1 {
+  line-height: 1.02;
+  font-weight: 660;
+}
+
+.product-intro-lead {
+  line-height: 1.55;
+}
+
+.theme-toggle,
+.button {
+  font-weight: 610;
+}
+
+.editor-heading label,
+.diff-column-headings {
+  font-weight: 620;
+  letter-spacing: 0.095em;
+}
+
+.results-header h2 {
+  font-weight: 620;
+}
+
+.editor-heading span,
+.editor-textarea,
+.result-legend b,
+.diff-row-symbol,
+.diff-line-number,
+.diff-text {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.editor-heading span,
+.diff-line-number {
+  letter-spacing: 0.015em;
+}
+
+.editor-textarea {
+  line-height: 1.62;
+  letter-spacing: -0.008em;
+}
+
+.diff-row-symbol {
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.diff-text {
+  line-height: 1.58;
+  letter-spacing: -0.006em;
+}
+
+@media (max-width: 480px) {
+  .site-shell::before {
+    opacity: 0.72;
+    -webkit-mask-image: radial-gradient(
+      ellipse 96% 60% at 50% 14%,
+      #000 0%,
+      rgba(0, 0, 0, 0.82) 42%,
+      rgba(0, 0, 0, 0.34) 70%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 96% 60% at 50% 14%,
+      #000 0%,
+      rgba(0, 0, 0, 0.82) 42%,
+      rgba(0, 0, 0, 0.34) 70%,
+      transparent 100%
+    );
+  }
+
+  .site-shell::after {
+    opacity: 0.72;
+  }
+}
+
+@media (max-height: 480px) and (min-width: 700px) {
+  .site-shell::before {
+    opacity: 0.68;
+    -webkit-mask-image: radial-gradient(
+      ellipse 82% 92% at 50% 8%,
+      #000 0%,
+      rgba(0, 0, 0, 0.72) 44%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 82% 92% at 50% 8%,
+      #000 0%,
+      rgba(0, 0, 0, 0.72) 44%,
+      transparent 100%
+    );
+  }
+
+  .site-shell::after {
+    opacity: 0.62;
+  }
+}
