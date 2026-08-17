@@ -8,23 +8,29 @@
 - Phase 0E Cloudflare Pages Direct Upload PR-preview deployment was accepted and squash-merged to `main`.
 - Phase 1A framework-independent comparison engine, project-owned result types, and Vitest gate were accepted and squash-merged to `main`.
 - Phase 1B comparator interface was accepted and squash-merged; its documentation closeout established the Phase 1C starting baseline `5a15f5b87734818f44991c8995ab84b48c189024`.
-- Phase 1C Copy + Export was accepted after Orchestrator review and Android Copy/Download QA, and PR #8 was squash-merged to `main` at `34109ee432372f2e806f4e70d4aa79a97aad1cfc`.
-- The accepted Phase 1C adds local Copy diff, local `.diff` download, and local plain-text report download through framework-independent serializers that consume the project-owned `ComparisonResult` without rerunning JsDiff.
-- Phase 1C preserves the privacy boundary: compared text, results, option snapshots, and generated export content remain transient and client-side; application clipboard access is write-only and user-initiated; no analytics, telemetry, backend, accounts, persistence, URL sharing, ads, or production deployment were added.
-- Post-merge GitHub Actions run `32048962053` completed successfully on accepted `main`: `Verify project` success, `Browser QA` success, and `Deploy Cloudflare preview` skipped on `main` as intended.
+- Phase 1C Copy + Export was accepted after Orchestrator review and Android Copy/Download QA, and PR #8 was squash-merged to `main`.
+- The Phase 1C documentation closeout was accepted and squash-merged, establishing the Phase 1D starting baseline `f60069455d85cb8d8be9eb1c85896fff7d249f25`.
+- Post-closeout GitHub Actions run `32053292530` completed successfully on that exact `main` commit.
 
 ## Current
 
-- Phase 1C is finished and accepted.
-- `main` at `34109ee432372f2e806f4e70d4aa79a97aad1cfc` is the clean accepted baseline for the next substantive phase.
-- The current application remains static-first, client-side for compared-text processing/export, and free of backend/accounts/analytics/ads/persistence.
-- No Phase 1D implementation has started.
+- Phase 1D — Launch / SEO Readiness is implemented on `phase-1d/launch-seo-readiness` / Draft PR #10 and remains unaccepted/unmerged.
+- Starting Phase 1D baseline: `f60069455d85cb8d8be9eb1c85896fff7d249f25`.
+- The comparator remains the primary experience; new static How it works, Private by design, common-use, and FAQ content sits below the tool and adds no hydrated island.
+- Astro now has the planned build-time production site `https://compare.amosfot.in`, which drives canonical/social URLs without activating production or DNS.
+- Static launch metadata includes canonical, Open Graph, Twitter summary metadata, one `WebSite` JSON-LD object, and a local SVG favicon.
+- Static `robots.txt` allows crawling and points to the production sitemap; `sitemap.xml` lists only the canonical homepage. PR previews remain protected by the existing Cloudflare `X-Robots-Tag: noindex` header.
+- Focused Playwright coverage validates SEO metadata, structured data, semantic content, hydration/runtime-network boundaries, favicon/robots/sitemap responses, and four additional launch-content screenshots.
+- No comparison/export core behavior, dependency, persistence, analytics/tracking, backend/account, CI workflow, production deployment, or custom-domain activation has been added.
 
 ## Next
 
-- Phase 1D — launch/SEO readiness.
-- At a high level, Phase 1D is expected to address useful static explanatory content, a privacy explanation, FAQ, metadata/canonical/social metadata where appropriate, robots/sitemap/indexability behavior, semantic/accessibility review, and SEO/performance/browser QA.
-- The detailed Phase 1D implementation contract will be defined separately before any product changes begin.
+- Complete fresh permanent GitHub Actions verification on the exact final docs-inclusive PR head.
+- Confirm all existing 58 unit tests and 31 pre-Phase-1D browser tests remain green alongside the new Phase 1D browser coverage.
+- Inspect the full screenshot artifact, including the four new launch-content captures, for spacing, readability, theme continuity, mobile stacking, and horizontal overflow.
+- Verify the normal Cloudflare PR preview, HTTP 200/noindex behavior, and exact real-head deployment provenance.
+- Orchestrator reviews the final source/diff, metadata/schema choices, privacy/runtime boundaries, CI, screenshots, and preview provenance.
+- Phase 1D may be accepted and merged only after separate user approval; keep PR #10 Draft until then.
 
 ## Known issues
 
