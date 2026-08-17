@@ -249,21 +249,29 @@ jobs:
           import fs from 'node:fs';
           const [file, branch, sha, url] = process.argv.slice(2);
           const deployments = JSON.parse(fs.readFileSync(file, 'utf8'));
-          const matching = deployments.find((deployment) => {
-            const source = deployment.source ?? {};
-            const config = source.config ?? {};
-            const deploymentBranch = deployment.deployment_trigger?.metadata?.branch
-              ?? deployment.branch
-              ?? config.branch;
-            const deploymentSha = deployment.deployment_trigger?.metadata?.commit_hash
-              ?? deployment.commit_hash
-              ?? config.commit_hash;
-            const deploymentUrl = deployment.url ?? deployment.deployment_url;
-            return deploymentBranch === branch && deploymentSha === sha && deploymentUrl === url;
-          });
+          const matching = deployments.find((deployment) =>
+            deployment.Environment === 'Preview'
+              && deployment.Branch === branch
+              && deployment.Source === sha.slice(0, 7)
+              && deployment.Deployment === url
+          );
           if (!matching) {
-            console.error(`No preview deployment metadata matched branch=${branch}, sha=${sha}, url=${url}`);
+            console.error(`No Wrangler preview deployment matched branch=${branch}, source=${sha.slice(0, 7)}, url=${url}`);
             process.exit(1);
           }
-          console.log(`Verified preview metadata: branch=${branch}; commit=${sha}; url=${url}`);
+          console.log(`Verified Wrangler preview metadata: id=${matching.Id}; branch=${matching.Branch}; source=${matching.Source}; url=${matching.Deployment}; status=${matching.Status}`);
           NODE
+
+          RAW_DEPLOYMENTS="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare/deployments?env=preview")"
+          RAW_MATCH="$(printf '%s' "$RAW_DEPLOYMENTS" | jq -c \
+            --arg branch "$EXPECTED_BRANCH" \
+            --arg sha "$EXPECTED_SHA" \
+            --arg url "$EXPECTED_URL" \
+            '.result[] | select(.environment == "preview" and .deployment_trigger.metadata.branch == $branch and .deployment_trigger.metadata.commit_hash == $sha and .url == $url)' | head -n 1)"
+          if [[ -z "$RAW_MATCH" ]]; then
+            echo "Cloudflare API metadata did not contain the expected full preview provenance." >&2
+            exit 1
+          fi
+          printf '%s' "$RAW_MATCH" | jq -r '"Verified Cloudflare preview provenance: id=\(.id); environment=\(.environment); branch=\(.deployment_trigger.metadata.branch); commit=\(.deployment_trigger.metadata.commit_hash); url=\(.url)"'
