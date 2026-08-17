@@ -218,10 +218,10 @@ jobs:
             STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PREVIEW_URL" || true)"
             if [[ "$STATUS" == "200" ]] \
               && grep -Fq 'Private Text Compare' "$BODY_FILE" \
-              && grep -Fq 'Project foundation initialized.' "$BODY_FILE" \
-              && grep -Fq 'Product interface has not been implemented yet.' "$BODY_FILE" \
+              && grep -Fq 'Compare two versions of text and instantly see exactly what changed.' "$BODY_FILE" \
+              && grep -Fq 'Everything stays in your browser.' "$BODY_FILE" \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$HEADERS_FILE"; then
-              echo "Live preview verification succeeded with HTTP 200 and X-Robots-Tag: noindex."
+              echo "Live preview verification succeeded with HTTP 200, product markers, and X-Robots-Tag: noindex."
               exit 0
             fi
             echo "Preview verification attempt $attempt not healthy yet (HTTP ${STATUS:-request-failed})."
