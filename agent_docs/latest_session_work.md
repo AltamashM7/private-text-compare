@@ -67,6 +67,22 @@ The existing Vercel-like precision/editor visual identity, dark-default dual the
 
 The existing ten comparator screenshots and all earlier browser/unit suites remain untouched.
 
+### Verified implementation evidence
+
+- Verified Phase 1D implementation head: `2bf8387389d3869bf2ac77a78d40d3ab033da48c`.
+- Final implementation-head workflow run `32055826893` completed the full permanent Verify → Browser QA → Cloudflare preview chain successfully.
+- Verify project: success.
+- Browser QA: success, with 41/41 browser tests passing.
+- Unit tests: 58/58 passing.
+- Screenshot artifact: `9296383518`, containing 14 files.
+- Deploy Cloudflare preview: success.
+- Immutable preview: `https://a025e542.private-text-compare.pages.dev`.
+- PR alias: `https://pr-10.private-text-compare.pages.dev`.
+- Deployment ID: `a025e542-0df9-4d96-b54a-a38dacc11eb3`.
+- Raw Cloudflare provenance verified the full implementation head `2bf8387389d3869bf2ac77a78d40d3ab033da48c` on preview branch `pr-10`.
+- Live preview verification passed with HTTP 200 and `X-Robots-Tag: noindex`.
+- No production deployment occurred and `compare.amosfot.in` custom-domain/DNS activation remains inactive.
+
 ### Scope and privacy boundary
 
 - No `src/core/compare/**` or `src/core/export/**` changes.
@@ -79,6 +95,8 @@ The existing ten comparator screenshots and all earlier browser/unit suites rema
 ### Acceptance boundary
 
 - Phase 1D is implemented on Draft PR #10 but is not accepted overall.
-- The exact final docs-inclusive PR head must complete the permanent Verify → Browser QA → Cloudflare preview chain before Builder completion is reported.
-- Orchestrator independently reviews the final diff, metadata/schema choices, privacy/runtime boundaries, CI, visual artifacts, and preview provenance.
+- GitHub remains authoritative for the exact final PR head.
+- Any documentation-only correction after the verified implementation head must itself pass the normal final-head Verify → Browser QA → Cloudflare preview chain before merge.
+- Orchestrator independently reviews the documentation-only correction and may request Android/manual QA if needed.
+- Phase 1D remains unaccepted/unmerged until Orchestrator review and explicit user approval.
 - Do not merge or mark PR #10 ready without separate explicit authorization.
