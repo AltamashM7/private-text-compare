@@ -22,3 +22,7 @@
 - **D020 — Comparison is explicit and button-triggered.** Editing text or comparison options after a result marks that result stale until Compare is pressed again.
 - **D021 — Compared text exists only in transient component state.** It is not persisted to browser storage, cookies, history, or URLs.
 - **D022 — Result presentation is responsive without changing the core model.** Wider screens align Original and Changed side-by-side; narrow screens stack the paired sides within each comparison row.
+- **D023 — The product uses a dark-default dual-theme visual system.** Dark is the first-visit default regardless of OS color preference; Light is an explicit user choice.
+- **D024 — Only the non-sensitive theme preference may persist in localStorage.** The `private-text-compare-theme` key may contain only `dark` or `light`; compared text, results, comparison options, and comparison history remain transient and clear on reload.
+- **D025 — The product visual identity follows a restrained precision/developer-editor direction.** Neutral chrome, minimal elevation, compact gutters, and semantic diff colors focus attention on actual text changes rather than decorative application surfaces.
+- **D026 — Theme state is applied before normal page paint.** The static document defaults to dark and a small head bootstrap restores only a valid saved theme before the page renders, preventing an avoidable light flash.
