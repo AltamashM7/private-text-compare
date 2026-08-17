@@ -86,7 +86,8 @@ test('favicon is linked and served as standalone SVG', async ({ page, request })
   const svg = await response.text();
   expect(svg).toContain('<svg');
   expect(svg).toContain('viewBox="0 0 64 64"');
-  expect(svg).not.toMatch(/https?:\/\//);
+  expect(svg).not.toMatch(/(?:xlink:)?href\s*=/i);
+  expect(svg).not.toMatch(/<image\b/i);
 });
 
 test('robots.txt allows crawling and points only to the production sitemap', async ({ request }) => {
