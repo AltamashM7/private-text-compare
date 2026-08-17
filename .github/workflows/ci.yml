@@ -62,6 +62,9 @@ jobs:
       - name: Check Astro and TypeScript
         run: npm run check
 
+      - name: Run core unit tests
+        run: npm run test:unit
+
       - name: Build static production output
         run: npm run build
 
