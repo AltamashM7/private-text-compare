@@ -102,3 +102,176 @@ jobs:
           path: artifacts/screenshots/
           if-no-files-found: error
           retention-days: 14
+
+  deploy-preview:
+    name: Deploy Cloudflare preview
+    needs: browser-qa
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
+      alias-url: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build static production output
+        run: npm run build
+
+      - name: Ensure Cloudflare Pages project exists
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          PROJECTS_JSON="$(npx wrangler pages project list --json)"
+          PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(."Project Name" == "private-text-compare")' | head -n 1)"
+
+          if [[ -z "$PROJECT_JSON" ]]; then
+            echo "Cloudflare Pages project private-text-compare is absent; creating Direct Upload project."
+            npx wrangler pages project create private-text-compare --production-branch main
+
+            for attempt in 1 2 3 4 5 6; do
+              PROJECTS_JSON="$(npx wrangler pages project list --json)"
+              PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(."Project Name" == "private-text-compare")' | head -n 1)"
+              if [[ -n "$PROJECT_JSON" ]]; then
+                break
+              fi
+              echo "Pages project re-list attempt $attempt has not observed the new project yet."
+              sleep 3
+            done
+          else
+            echo "Cloudflare Pages project private-text-compare already exists; not recreating it."
+          fi
+
+          if [[ -z "$PROJECT_JSON" ]]; then
+            echo "Cloudflare Pages project private-text-compare was not found after bounded inspection/creation retries." >&2
+            exit 1
+          fi
+
+          PROJECT_API_JSON="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare")"
+          API_SUCCESS="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.success')"
+          PRODUCTION_BRANCH="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.result.production_branch // empty')"
+
+          if [[ "$API_SUCCESS" != "true" ]]; then
+            echo "Cloudflare Pages project metadata lookup did not report success." >&2
+            printf '%s' "$PROJECT_API_JSON" | jq -c '{success, errors}' >&2
+            exit 1
+          fi
+
+          if [[ "$PRODUCTION_BRANCH" != "main" ]]; then
+            echo "Cloudflare Pages project has unexpected production branch: ${PRODUCTION_BRANCH:-<missing>}" >&2
+            exit 1
+          fi
+
+          echo "Cloudflare Pages project verified: private-text-compare; production_branch=main"
+
+      - name: Deploy Cloudflare Pages preview
+        id: deploy
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.123.0'
+          command: pages deploy dist --project-name=private-text-compare --branch=pr-${{ github.event.pull_request.number }} --commit-hash=${{ github.event.pull_request.head.sha }}
+
+      - name: Report public preview URLs
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          ALIAS_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_URL"
+          test -n "$ALIAS_URL"
+          echo "Immutable preview URL: $DEPLOYMENT_URL"
+          echo "Preview branch alias URL: $ALIAS_URL"
+
+      - name: Verify live Cloudflare preview
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+        run: |
+          set -euo pipefail
+          test -n "$PREVIEW_URL"
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          STATUS=""
+
+          for attempt in 1 2 3 4 5 6; do
+            : > "$HEADERS_FILE"
+            STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PREVIEW_URL" || true)"
+            if [[ "$STATUS" == "200" ]] \
+              && grep -Fq 'Private Text Compare' "$BODY_FILE" \
+              && grep -Fq 'Project foundation initialized.' "$BODY_FILE" \
+              && grep -Fq 'Product interface has not been implemented yet.' "$BODY_FILE" \
+              && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$HEADERS_FILE"; then
+              echo "Live preview verification succeeded with HTTP 200 and X-Robots-Tag: noindex."
+              exit 0
+            fi
+            echo "Preview verification attempt $attempt not healthy yet (HTTP ${STATUS:-request-failed})."
+            sleep 5
+          done
+
+          echo "Cloudflare preview failed bounded live verification." >&2
+          echo "Final HTTP status: ${STATUS:-request-failed}" >&2
+          echo "Response headers:" >&2
+          sed -n '1,80p' "$HEADERS_FILE" >&2
+          exit 1
+
+      - name: Inspect Cloudflare preview deployment metadata
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPECTED_BRANCH: pr-${{ github.event.pull_request.number }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          METADATA_FILE="$(mktemp)"
+          npx wrangler pages deployment list --project-name private-text-compare --environment preview --json > "$METADATA_FILE"
+          echo "Cloudflare preview deployment metadata:"
+          cat "$METADATA_FILE"
+          node --input-type=module - "$METADATA_FILE" "$EXPECTED_BRANCH" "$EXPECTED_SHA" "$EXPECTED_URL" <<'NODE'
+          import fs from 'node:fs';
+          const [file, branch, sha, url] = process.argv.slice(2);
+          const deployments = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const matching = deployments.find((deployment) =>
+            deployment.Environment === 'Preview'
+              && deployment.Branch === branch
+              && deployment.Source === sha.slice(0, 7)
+              && deployment.Deployment === url
+          );
+          if (!matching) {
+            console.error(`No Wrangler preview deployment matched branch=${branch}, source=${sha.slice(0, 7)}, url=${url}`);
+            process.exit(1);
+          }
+          console.log(`Verified Wrangler preview metadata: id=${matching.Id}; branch=${matching.Branch}; source=${matching.Source}; url=${matching.Deployment}; status=${matching.Status}`);
+          NODE
+
+          RAW_DEPLOYMENTS="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare/deployments?env=preview")"
+          RAW_MATCH="$(printf '%s' "$RAW_DEPLOYMENTS" | jq -c \
+            --arg branch "$EXPECTED_BRANCH" \
+            --arg sha "$EXPECTED_SHA" \
+            --arg url "$EXPECTED_URL" \
+            '.result[] | select(.environment == "preview" and .deployment_trigger.metadata.branch == $branch and .deployment_trigger.metadata.commit_hash == $sha and .url == $url)' | head -n 1)"
+          if [[ -z "$RAW_MATCH" ]]; then
+            echo "Cloudflare API metadata did not contain the expected full preview provenance." >&2
+            exit 1
+          fi
+          printf '%s' "$RAW_MATCH" | jq -r '"Verified Cloudflare preview provenance: id=\(.id); environment=\(.environment); branch=\(.deployment_trigger.metadata.branch); commit=\(.deployment_trigger.metadata.commit_hash); url=\(.url)"'
