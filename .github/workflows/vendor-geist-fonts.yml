@@ -1,4 +1,4 @@
-name: Vendor pinned Geist fonts
+name: Apply Phase 1B typography correction
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  vendor-fonts:
+  apply-correction:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout branch
@@ -19,50 +19,282 @@ jobs:
         with:
           ref: phase-1b/comparator-ui
 
-      - name: Download and verify pinned Geist v1.7.1 assets
+      - name: Reverify vendored Geist bytes
         shell: bash
         run: |
           set -euo pipefail
-          work="$(mktemp -d)"
-          trap 'rm -rf "$work"' EXIT
-
-          curl --fail-with-body --silent --show-error --location --retry 3 \
-            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/fonts/Geist/webfonts/Geist%5Bwght%5D.woff2' \
-            --output "$work/geist-sans-variable.woff2"
-          curl --fail-with-body --silent --show-error --location --retry 3 \
-            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/fonts/GeistMono/webfonts/GeistMono%5Bwght%5D.woff2' \
-            --output "$work/geist-mono-variable.woff2"
-          curl --fail-with-body --silent --show-error --location --retry 3 \
-            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/OFL.txt' \
-            --output "$work/OFL.txt"
-
-          test "$(git hash-object "$work/geist-sans-variable.woff2")" = '71dab8bedba3bfef5dccd7875ed05cac44c7345d'
-          test "$(git hash-object "$work/geist-mono-variable.woff2")" = '0e746fc18223dfcb107a85502a0abe1b1a02d51a'
-          test "$(git hash-object "$work/OFL.txt")" = '04e95fc550855eb44416b9db1f6722f5cb7342db'
-
-          mkdir -p public/fonts/geist
-          cp "$work/geist-sans-variable.woff2" public/fonts/geist/geist-sans-variable.woff2
-          cp "$work/geist-mono-variable.woff2" public/fonts/geist/geist-mono-variable.woff2
-          cp "$work/OFL.txt" public/fonts/geist/OFL.txt
-
           test "$(git hash-object public/fonts/geist/geist-sans-variable.woff2)" = '71dab8bedba3bfef5dccd7875ed05cac44c7345d'
           test "$(git hash-object public/fonts/geist/geist-mono-variable.woff2)" = '0e746fc18223dfcb107a85502a0abe1b1a02d51a'
           test "$(git hash-object public/fonts/geist/OFL.txt)" = '04e95fc550855eb44416b9db1f6722f5cb7342db'
 
-      - name: Commit verified font assets
+      - name: Apply typography, canvas, provenance, and browser assertions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              return text.replace(old, new, 1)
+
+          css_path = Path('src/styles/global.css')
+          css = css_path.read_text()
+
+          css = replace_once(css, '@import "tailwindcss";\n', '''@import "tailwindcss";
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist/geist-sans-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist/geist-mono-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+''', 'font faces')
+
+          css = replace_once(css, '  --grid-line: rgba(255, 255, 255, 0.025);', '''  --grid-minor: rgba(255, 255, 255, 0.021);
+  --grid-major: rgba(210, 220, 235, 0.052);
+  --grid-node: rgba(205, 218, 238, 0.13);
+  --grid-hatch: rgba(255, 255, 255, 0.025);
+  --canvas-glow: rgba(118, 139, 172, 0.07);''', 'dark grid tokens')
+          css = replace_once(css, '  --grid-line: rgba(0, 0, 0, 0.025);', '''  --grid-minor: rgba(23, 23, 23, 0.022);
+  --grid-major: rgba(55, 62, 72, 0.052);
+  --grid-node: rgba(48, 55, 65, 0.12);
+  --grid-hatch: rgba(0, 0, 0, 0.025);
+  --canvas-glow: rgba(255, 255, 255, 0.82);''', 'light grid tokens')
+
+          css = replace_once(css, '  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;', '  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;', 'UI font stack')
+
+          css = replace_once(css, '''body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    var(--page);
+  background-size: 32px 32px;
+  color: var(--text);
+  transition: background-color 120ms ease, color 120ms ease;
+}''', '''body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--text);
+  transition: background-color 120ms ease, color 120ms ease;
+}''', 'body grid removal')
+
+          css = replace_once(css, '''.site-shell {
+  min-height: 100vh;
+  width: 100%;
+}''', '''.site-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--page);
+}
+
+.site-shell::before,
+.site-shell::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.site-shell::before {
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--grid-node) 1px, transparent 1.45px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size: 112px 112px, 112px 112px, 112px 112px, 28px 28px, 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 82% 68% at 50% 18%, #000 0%, rgba(0, 0, 0, 0.9) 34%, rgba(0, 0, 0, 0.48) 63%, transparent 100%);
+  mask-image: radial-gradient(ellipse 82% 68% at 50% 18%, #000 0%, rgba(0, 0, 0, 0.9) 34%, rgba(0, 0, 0, 0.48) 63%, transparent 100%);
+}
+
+.site-shell::after {
+  background: radial-gradient(ellipse 52% 28% at 50% 4%, var(--canvas-glow), transparent 72%);
+}''', 'technical canvas')
+
+          css = replace_once(css, '''.page-frame {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}''', '''.page-frame {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}''', 'content layering')
+
+          css = css.replace('font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;', 'font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;')
+          css = css.replace('font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;', 'font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;')
+          css = css.replace('var(--grid-line) 8px,\n      var(--grid-line) 9px', 'var(--grid-hatch) 8px,\n      var(--grid-hatch) 9px')
+
+          css = css.replace('  font-weight: 680;\n  letter-spacing: -0.01em;', '  font-weight: 620;\n  letter-spacing: -0.018em;', 1)
+          css = css.replace('  font-weight: 680;\n  letter-spacing: 0.12em;', '  font-weight: 620;\n  letter-spacing: 0.105em;', 1)
+          css = css.replace('  letter-spacing: -0.035em;', '  letter-spacing: -0.032em;', 1)
+          css = css.replace('  line-height: 1.04;\n  font-weight: 720;', '  line-height: 1.02;\n  font-weight: 660;', 1)
+          css = css.replace('  line-height: 1.6;', '  line-height: 1.55;', 1)
+          css = css.replace('  font-weight: 700;\n  letter-spacing: 0.11em;', '  font-weight: 620;\n  letter-spacing: 0.095em;', 1)
+          css = css.replace('  font-size: 13px;\n  line-height: 1.7;', '  font-size: 13px;\n  line-height: 1.62;\n  letter-spacing: -0.008em;', 1)
+          css = css.replace('  font-weight: 650;\n  cursor: pointer;', '  font-weight: 610;\n  cursor: pointer;', 1)
+          css = css.replace('  font-size: 16px;\n  font-weight: 680;', '  font-size: 16px;\n  font-weight: 620;', 1)
+          css = css.replace('  font-weight: 700;\n  letter-spacing: 0.11em;', '  font-weight: 620;\n  letter-spacing: 0.095em;', 1)
+          css = css.replace('  font-size: 12px;\n  font-weight: 700;', '  font-size: 12px;\n  font-weight: 650;\n  letter-spacing: 0.01em;', 1)
+          css = css.replace('  font-size: 11px;\n  font-variant-numeric: tabular-nums;', '  font-size: 11px;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: 0.015em;', 1)
+          css = css.replace('  font-size: 12px;\n  line-height: 1.65;', '  font-size: 12px;\n  line-height: 1.58;\n  letter-spacing: -0.006em;', 1)
+
+          css = replace_once(css, '@media (max-width: 480px) {', '''@media (max-width: 480px) {
+  .site-shell::before {
+    opacity: 0.72;
+    -webkit-mask-image: radial-gradient(ellipse 96% 60% at 50% 14%, #000 0%, rgba(0, 0, 0, 0.82) 42%, rgba(0, 0, 0, 0.34) 70%, transparent 100%);
+    mask-image: radial-gradient(ellipse 96% 60% at 50% 14%, #000 0%, rgba(0, 0, 0, 0.82) 42%, rgba(0, 0, 0, 0.34) 70%, transparent 100%);
+  }
+
+  .site-shell::after {
+    opacity: 0.72;
+  }''', 'mobile canvas tuning')
+
+          css = replace_once(css, '@media (max-height: 480px) and (min-width: 700px) {', '''@media (max-height: 480px) and (min-width: 700px) {
+  .site-shell::before {
+    opacity: 0.68;
+    -webkit-mask-image: radial-gradient(ellipse 82% 92% at 50% 8%, #000 0%, rgba(0, 0, 0, 0.72) 44%, transparent 100%);
+    mask-image: radial-gradient(ellipse 82% 92% at 50% 8%, #000 0%, rgba(0, 0, 0, 0.72) 44%, transparent 100%);
+  }
+
+  .site-shell::after {
+    opacity: 0.62;
+  }''', 'landscape canvas tuning')
+
+          css_path.write_text(css)
+
+          layout_path = Path('src/layouts/BaseLayout.astro')
+          layout = layout_path.read_text()
+          layout = replace_once(layout, '    <meta name="generator" content={Astro.generator} />\n', '''    <meta name="generator" content={Astro.generator} />
+    <link rel="preload" href="/fonts/geist/geist-sans-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/geist/geist-mono-variable.woff2" as="font" type="font/woff2" crossorigin />
+''', 'font preloads')
+          layout_path.write_text(layout)
+
+          source = '''# Geist font provenance
+
+- Font families: Geist Sans and Geist Mono.
+- Upstream project: `vercel/geist-font`.
+- Upstream tag: `v1.7.1`.
+- Sans source path: `fonts/Geist/webfonts/Geist[wght].woff2`.
+- Mono source path: `fonts/GeistMono/webfonts/GeistMono[wght].woff2`.
+- Project copies: `geist-sans-variable.woff2` and `geist-mono-variable.woff2`.
+- The WOFF2 files were copied unmodified from the pinned upstream tag.
+- Upstream Git blob SHA (Sans): `71dab8bedba3bfef5dccd7875ed05cac44c7345d`.
+- Upstream Git blob SHA (Mono): `0e746fc18223dfcb107a85502a0abe1b1a02d51a`.
+- License: SIL Open Font License 1.1; retained as `OFL.txt` in this directory.
+
+The upstream project is recorded only for provenance. No endorsement is implied.
+'''
+          Path('public/fonts/geist/SOURCE.md').write_text(source)
+
+          test_path = Path('tests/browser/foundation.spec.ts')
+          tests = test_path.read_text()
+          anchor = '''test('initial comparator state is usable and accessible', async ({ page }) => {'''
+          font_test = '''test('self-hosted Geist fonts resolve from the same origin and technical canvas is present', async ({ page }) => {
+  const fontResponses: Array<{ url: string; status: number }> = [];
+  page.on('response', (response) => {
+    if (response.url().includes('/fonts/geist/') && response.url().endsWith('.woff2')) {
+      fontResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+
+  const errors = await openTool(page);
+  await page.evaluate(() => document.fonts.ready);
+  await fillFixture(page);
+
+  const verification = await page.evaluate(() => {
+    const editor = document.querySelector('.editor-textarea');
+    const diffText = document.querySelector('.diff-text');
+    const shell = document.querySelector('.site-shell');
+    if (!(editor instanceof HTMLElement) || !(diffText instanceof HTMLElement) || !(shell instanceof HTMLElement)) {
+      throw new Error('Expected typography/canvas targets are missing.');
+    }
+
+    const resourceUrls = performance.getEntriesByType('resource').map((entry) => entry.name);
+    const fontUrls = resourceUrls.filter((url) => url.includes('/fonts/geist/') && url.endsWith('.woff2'));
+    const rootStyle = getComputedStyle(document.documentElement);
+    const canvasStyle = getComputedStyle(shell, '::before');
+
+    return {
+      geistReady: document.fonts.check('16px "Geist"'),
+      geistMonoReady: document.fonts.check('16px "Geist Mono"'),
+      bodyFamily: getComputedStyle(document.body).fontFamily,
+      editorFamily: getComputedStyle(editor).fontFamily,
+      diffFamily: getComputedStyle(diffText).fontFamily,
+      origin: location.origin,
+      fontUrls,
+      allResources: resourceUrls,
+      gridMinor: rootStyle.getPropertyValue('--grid-minor').trim(),
+      gridMajor: rootStyle.getPropertyValue('--grid-major').trim(),
+      gridNode: rootStyle.getPropertyValue('--grid-node').trim(),
+      canvasBackground: canvasStyle.backgroundImage,
+    };
+  });
+
+  expect(verification.geistReady).toBe(true);
+  expect(verification.geistMonoReady).toBe(true);
+  expect(verification.bodyFamily.startsWith('Geist')).toBe(true);
+  expect(verification.editorFamily.startsWith('"Geist Mono"') || verification.editorFamily.startsWith('Geist Mono')).toBe(true);
+  expect(verification.diffFamily.startsWith('"Geist Mono"') || verification.diffFamily.startsWith('Geist Mono')).toBe(true);
+  expect(verification.gridMinor).not.toBe('');
+  expect(verification.gridMajor).not.toBe('');
+  expect(verification.gridNode).not.toBe('');
+  expect(verification.canvasBackground).not.toBe('none');
+
+  expect(verification.fontUrls).toHaveLength(2);
+  for (const url of verification.fontUrls) {
+    expect(new URL(url).origin).toBe(verification.origin);
+  }
+  expect(fontResponses).toHaveLength(2);
+  expect(fontResponses.every((response) => response.status === 200)).toBe(true);
+  expect(fontResponses.every((response) => new URL(response.url).origin === verification.origin)).toBe(true);
+
+  const forbiddenRuntimeHosts = [
+    'fonts.googleapis.com',
+    'fonts.gstatic.com',
+    'vercel.com',
+    'githubusercontent.com',
+    'unpkg.com',
+    'cdn.jsdelivr.net',
+  ];
+  expect(verification.allResources.some((url) => forbiddenRuntimeHosts.some((host) => new URL(url).hostname === host))).toBe(false);
+  expect(errors.pageErrors).toEqual([]);
+  expect(errors.consoleErrors).toEqual([]);
+});
+
+test('initial comparator state is usable and accessible', async ({ page }) => {'''
+          tests = replace_once(tests, anchor, font_test, 'font browser test')
+          test_path.write_text(tests)
+          PY
+
+          git diff --check
+
+      - name: Commit refinement
         shell: bash
         run: |
           set -euo pipefail
-          git add public/fonts/geist/geist-sans-variable.woff2 \
-            public/fonts/geist/geist-mono-variable.woff2 \
-            public/fonts/geist/OFL.txt
-
-          if git diff --cached --quiet; then
-            echo 'Pinned Geist assets already match v1.7.1.'
-            exit 0
-          fi
-
+          git add src/styles/global.css src/layouts/BaseLayout.astro tests/browser/foundation.spec.ts public/fonts/geist/SOURCE.md
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'style: vendor Geist v1.7.1 font assets'
+          git commit -m 'style: refine Geist typography and technical canvas'
           git push origin HEAD:phase-1b/comparator-ui
