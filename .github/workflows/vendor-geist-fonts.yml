@@ -1,0 +1,68 @@
+name: Vendor pinned Geist fonts
+
+on:
+  push:
+    branches:
+      - phase-1b/comparator-ui
+    paths:
+      - .github/workflows/vendor-geist-fonts.yml
+
+permissions:
+  contents: write
+
+jobs:
+  vendor-fonts:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: phase-1b/comparator-ui
+
+      - name: Download and verify pinned Geist v1.7.1 assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+
+          curl --fail-with-body --silent --show-error --location --retry 3 \
+            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/fonts/Geist/webfonts/Geist%5Bwght%5D.woff2' \
+            --output "$work/geist-sans-variable.woff2"
+          curl --fail-with-body --silent --show-error --location --retry 3 \
+            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/fonts/GeistMono/webfonts/GeistMono%5Bwght%5D.woff2' \
+            --output "$work/geist-mono-variable.woff2"
+          curl --fail-with-body --silent --show-error --location --retry 3 \
+            'https://raw.githubusercontent.com/vercel/geist-font/v1.7.1/OFL.txt' \
+            --output "$work/OFL.txt"
+
+          test "$(git hash-object "$work/geist-sans-variable.woff2")" = '71dab8bedba3bfef5dccd7875ed05cac44c7345d'
+          test "$(git hash-object "$work/geist-mono-variable.woff2")" = '0e746fc18223dfcb107a85502a0abe1b1a02d51a'
+          test "$(git hash-object "$work/OFL.txt")" = '04e95fc550855eb44416b9db1f6722f5cb7342db'
+
+          mkdir -p public/fonts/geist
+          cp "$work/geist-sans-variable.woff2" public/fonts/geist/geist-sans-variable.woff2
+          cp "$work/geist-mono-variable.woff2" public/fonts/geist/geist-mono-variable.woff2
+          cp "$work/OFL.txt" public/fonts/geist/OFL.txt
+
+          test "$(git hash-object public/fonts/geist/geist-sans-variable.woff2)" = '71dab8bedba3bfef5dccd7875ed05cac44c7345d'
+          test "$(git hash-object public/fonts/geist/geist-mono-variable.woff2)" = '0e746fc18223dfcb107a85502a0abe1b1a02d51a'
+          test "$(git hash-object public/fonts/geist/OFL.txt)" = '04e95fc550855eb44416b9db1f6722f5cb7342db'
+
+      - name: Commit verified font assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add public/fonts/geist/geist-sans-variable.woff2 \
+            public/fonts/geist/geist-mono-variable.woff2 \
+            public/fonts/geist/OFL.txt
+
+          if git diff --cached --quiet; then
+            echo 'Pinned Geist assets already match v1.7.1.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'style: vendor Geist v1.7.1 font assets'
+          git push origin HEAD:phase-1b/comparator-ui
