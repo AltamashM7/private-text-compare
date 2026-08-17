@@ -5,8 +5,15 @@ import type {
   ComparisonRow,
   InlineSegment,
 } from '../core/compare';
+import {
+  serializeComparisonReport,
+  serializeUnifiedDiff,
+} from '../core/export';
+import type { ComparisonExportOptions } from '../core/export';
 
 const INITIAL_RESULT_MESSAGE = 'Add text above and press Compare to see the differences.';
+const DIFF_FILENAME = 'private-text-compare.diff';
+const REPORT_FILENAME = 'private-text-compare-report.txt';
 
 const ROW_META: Record<
   ComparisonRow['kind'],
@@ -24,6 +31,19 @@ interface LineCellProps {
   text?: string;
   segments?: InlineSegment[];
   emptyLabel: string;
+}
+
+function downloadText(content: string, filename: string, type: string): void {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.hidden = true;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 function InlineText({ segments }: { segments: InlineSegment[] }) {
@@ -132,23 +152,29 @@ export default function TextCompareTool() {
   const [ignoreCase, setIgnoreCase] = useState(false);
   const [ignoreSurroundingWhitespace, setIgnoreSurroundingWhitespace] = useState(false);
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [resultOptions, setResultOptions] = useState<ComparisonExportOptions | null>(null);
   const [stale, setStale] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState(INITIAL_RESULT_MESSAGE);
 
   const markResultStale = () => {
     if (result !== null && !stale) {
       setStale(true);
+      setCopied(false);
       setAnnouncement('Inputs changed — compare again to refresh the result.');
     }
   };
 
   const runComparison = () => {
-    const nextResult = compareTexts(originalText, changedText, {
+    const options: ComparisonExportOptions = {
       ignoreCase,
       ignoreSurroundingWhitespace,
-    });
+    };
+    const nextResult = compareTexts(originalText, changedText, options);
     setResult(nextResult);
+    setResultOptions(options);
     setStale(false);
+    setCopied(false);
     setAnnouncement(
       `Comparison complete. ${nextResult.stats.changedRowCount} changed, ${nextResult.stats.addedLineCount} added, and ${nextResult.stats.removedLineCount} removed lines.`,
     );
@@ -158,7 +184,9 @@ export default function TextCompareTool() {
     setOriginalText(changedText);
     setChangedText(originalText);
     setResult(null);
+    setResultOptions(null);
     setStale(false);
+    setCopied(false);
     setAnnouncement('Inputs swapped. Press Compare to generate a new result.');
   };
 
@@ -166,8 +194,43 @@ export default function TextCompareTool() {
     setOriginalText('');
     setChangedText('');
     setResult(null);
+    setResultOptions(null);
     setStale(false);
+    setCopied(false);
     setAnnouncement(INITIAL_RESULT_MESSAGE);
+  };
+
+  const copyDiff = async () => {
+    if (result === null || stale) return;
+
+    try {
+      await navigator.clipboard.writeText(serializeUnifiedDiff(result));
+      setCopied(true);
+      setAnnouncement('Unified diff copied to clipboard.');
+    } catch {
+      setCopied(false);
+      setAnnouncement('Clipboard access was blocked. Download the .diff file instead.');
+    }
+  };
+
+  const downloadDiff = () => {
+    if (result === null || stale) return;
+    downloadText(
+      serializeUnifiedDiff(result),
+      DIFF_FILENAME,
+      'text/x-diff;charset=utf-8',
+    );
+    setAnnouncement('Unified diff downloaded.');
+  };
+
+  const downloadReport = () => {
+    if (result === null || resultOptions === null || stale) return;
+    downloadText(
+      serializeComparisonReport(result, resultOptions),
+      REPORT_FILENAME,
+      'text/plain;charset=utf-8',
+    );
+    setAnnouncement('Text report downloaded.');
   };
 
   return (
@@ -268,13 +331,41 @@ export default function TextCompareTool() {
 
           {result !== null ? (
             <div class="result-meta-row">
-              <p class="result-line-counts">
-                Original: {result.stats.originalLineCount} lines · Changed: {result.stats.changedLineCount} lines
-              </p>
-              <div class="result-legend" aria-label="Result legend">
-                <span><b>~</b> Changed</span>
-                <span><b>+</b> Added</span>
-                <span><b>−</b> Removed</span>
+              <div class="result-meta-summary">
+                <p class="result-line-counts">
+                  Original: {result.stats.originalLineCount} lines · Changed: {result.stats.changedLineCount} lines
+                </p>
+                <div class="result-legend" aria-label="Result legend">
+                  <span><b>~</b> Changed</span>
+                  <span><b>+</b> Added</span>
+                  <span><b>−</b> Removed</span>
+                </div>
+              </div>
+              <div class="result-actions" aria-label="Result export actions">
+                <button
+                  type="button"
+                  class="result-action-button"
+                  disabled={stale}
+                  onClick={copyDiff}
+                >
+                  {copied ? 'Copied' : 'Copy diff'}
+                </button>
+                <button
+                  type="button"
+                  class="result-action-button"
+                  disabled={stale}
+                  onClick={downloadDiff}
+                >
+                  Download .diff
+                </button>
+                <button
+                  type="button"
+                  class="result-action-button"
+                  disabled={stale}
+                  onClick={downloadReport}
+                >
+                  Download .txt
+                </button>
               </div>
             </div>
           ) : null}
