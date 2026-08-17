@@ -5,6 +5,9 @@ const fixture = {
   changed: `The quick bright fox\njumps over the lazy dog!\nKeep this line.\nAdd this line.`,
 };
 
+const initialResultMessage = 'Add text above and press Compare to see the differences.';
+const staleResultMessage = 'Inputs changed — compare again to refresh the result.';
+
 const screenshots = [
   { name: 'desktop-1440x900.png', width: 1440, height: 900 },
   { name: 'desktop-1024x768.png', width: 1024, height: 768 },
@@ -12,6 +15,9 @@ const screenshots = [
   { name: 'mobile-390x844.png', width: 390, height: 844 },
   { name: 'mobile-landscape-844x390.png', width: 844, height: 390 },
 ] as const;
+
+const originalInput = (page: Page) => page.getByRole('textbox', { name: 'Original' });
+const changedInput = (page: Page) => page.getByRole('textbox', { name: 'Changed' });
 
 async function openTool(page: Page) {
   const pageErrors: string[] = [];
@@ -26,8 +32,8 @@ async function openTool(page: Page) {
 }
 
 async function fillFixture(page: Page) {
-  await page.getByLabel('Original').fill(fixture.original);
-  await page.getByLabel('Changed').fill(fixture.changed);
+  await originalInput(page).fill(fixture.original);
+  await changedInput(page).fill(fixture.changed);
   await page.getByRole('button', { name: 'Compare' }).click();
   await expect(page.locator('[data-result-state="current"]')).toBeVisible();
 }
@@ -37,14 +43,14 @@ test('initial comparator state is usable and accessible', async ({ page }) => {
   await expect(page).toHaveTitle('Private Text Compare — Compare Text Online Privately');
   await expect(page.getByRole('heading', { level: 1, name: 'Private Text Compare' })).toBeVisible();
   await expect(page.getByText('Compare two versions of text and instantly see exactly what changed.')).toBeVisible();
-  await expect(page.getByLabel('Original')).toBeVisible();
-  await expect(page.getByLabel('Changed')).toBeVisible();
+  await expect(originalInput(page)).toBeVisible();
+  await expect(changedInput(page)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Compare' })).toBeVisible();
   await expect(page.getByLabel('Ignore case')).toBeVisible();
   await expect(page.getByLabel('Ignore surrounding whitespace')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Swap' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Clear' })).toBeVisible();
-  await expect(page.getByText('Add text above and press Compare to see the differences.')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText(initialResultMessage);
   const overflow = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
   expect(errors.pageErrors).toEqual([]);
@@ -67,20 +73,20 @@ test('renders line rows, inline changes, statistics, and line numbers', async ({
 
 test('ignore case changes a case-only difference to unchanged', async ({ page }) => {
   await openTool(page);
-  await page.getByLabel('Original').fill('Hello World');
-  await page.getByLabel('Changed').fill('hello world');
+  await originalInput(page).fill('Hello World');
+  await changedInput(page).fill('hello world');
   await page.getByRole('button', { name: 'Compare' }).click();
   await expect(page.locator('[data-row-kind="changed"]')).toHaveCount(1);
   await page.getByLabel('Ignore case').check();
-  await expect(page.getByText('Inputs changed — compare again to refresh the result.', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText(staleResultMessage);
   await page.getByRole('button', { name: 'Compare' }).click();
   await expect(page.locator('[data-row-kind="unchanged"]')).toHaveCount(1);
 });
 
 test('ignore surrounding whitespace ignores only outer whitespace', async ({ page }) => {
   await openTool(page);
-  await page.getByLabel('Original').fill('  hello  ');
-  await page.getByLabel('Changed').fill('hello');
+  await originalInput(page).fill('  hello  ');
+  await changedInput(page).fill('hello');
   await page.getByRole('button', { name: 'Compare' }).click();
   await expect(page.locator('[data-row-kind="changed"]')).toHaveCount(1);
   await page.getByLabel('Ignore surrounding whitespace').check();
@@ -91,17 +97,17 @@ test('ignore surrounding whitespace ignores only outer whitespace', async ({ pag
 test('editing after comparison marks the result stale', async ({ page }) => {
   await openTool(page);
   await fillFixture(page);
-  await page.getByLabel('Changed').fill(`${fixture.changed}\nAnother line.`);
+  await changedInput(page).fill(`${fixture.changed}\nAnother line.`);
   await expect(page.locator('[data-result-state="stale"]')).toBeVisible();
-  await expect(page.getByText('Inputs changed — compare again to refresh the result.', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText(staleResultMessage);
 });
 
 test('Swap exchanges inputs and clears the previous result', async ({ page }) => {
   await openTool(page);
   await fillFixture(page);
   await page.getByRole('button', { name: 'Swap' }).click();
-  await expect(page.getByLabel('Original')).toHaveValue(fixture.changed);
-  await expect(page.getByLabel('Changed')).toHaveValue(fixture.original);
+  await expect(originalInput(page)).toHaveValue(fixture.changed);
+  await expect(changedInput(page)).toHaveValue(fixture.original);
   await expect(page.locator('[data-result-state="empty"]')).toBeVisible();
   await expect(page.locator('[data-row-kind]')).toHaveCount(0);
 });
@@ -110,10 +116,10 @@ test('Clear empties inputs and returns to the initial result state', async ({ pa
   await openTool(page);
   await fillFixture(page);
   await page.getByRole('button', { name: 'Clear' }).click();
-  await expect(page.getByLabel('Original')).toHaveValue('');
-  await expect(page.getByLabel('Changed')).toHaveValue('');
+  await expect(originalInput(page)).toHaveValue('');
+  await expect(changedInput(page)).toHaveValue('');
   await expect(page.locator('[data-result-state="empty"]')).toBeVisible();
-  await expect(page.getByText('Add text above and press Compare to see the differences.')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText(initialResultMessage);
 });
 
 for (const viewport of screenshots) {
