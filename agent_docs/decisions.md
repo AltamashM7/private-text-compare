@@ -13,4 +13,8 @@
 - **D011 — Browser QA uses Playwright in GitHub Actions.** Chromium exercises the built static application and responsive screenshots remain CI artifacts rather than committed assets.
 - **D012 — Cloudflare Pages uses Direct Upload controlled by GitHub Actions.** Cloudflare Git integration is intentionally not used.
 - **D013 — Same-repository PR previews are gated behind normal CI and Browser QA.** Fork-originated pull requests never receive Cloudflare deployment secrets.
-- **D014 — Production deployment remains separate and non-automatic.** `compare.amosfot.in` is reserved as the planned production custom domain and is not active during Phase 0E.
+- **D014 — Production deployment remains separate and non-automatic.** `compare.amosfot.in` is reserved as the planned production custom domain and is not active.
+- **D015 — The comparison engine is framework-independent and exposes project-owned typed results.** UI code consumes the core API and does not depend directly on JsDiff types.
+- **D016 — Line comparison can ignore case and leading/trailing whitespace while retaining both raw input lines.** Internal whitespace remains meaningful.
+- **D017 — Adjacent remove/add replacement blocks pair positionally into changed rows.** Fuzzy or similarity-based line matching is intentionally deferred.
+- **D018 — Core domain behavior is protected by Vitest unit tests before Browser QA and preview deployment.** A unit-test failure blocks downstream verification stages.
