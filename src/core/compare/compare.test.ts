@@ -171,8 +171,11 @@ describe('compareTexts', () => {
     const row = changedRows(
       compareTexts('  hello old  ', 'hello new', { ignoreSurroundingWhitespace: true }).rows,
     )[0];
-    expect(row.originalSegments[0]).toEqual({ kind: 'equal', text: '  ' });
-    expect(row.originalSegments.at(-1)).toEqual({ kind: 'equal', text: '  ' });
+    expect(reconstructed(row.originalSegments)).toBe(row.originalText);
+    expect(row.originalSegments[0]).toMatchObject({ kind: 'equal' });
+    expect(row.originalSegments[0].text.startsWith('  ')).toBe(true);
+    expect(row.originalSegments.at(-1)).toMatchObject({ kind: 'equal' });
+    expect(row.originalSegments.at(-1)?.text.endsWith('  ')).toBe(true);
     expect(row.originalSegments.filter((segment) => segment.kind === 'removed').map((segment) => segment.text).join('')).toBe('old');
   });
 

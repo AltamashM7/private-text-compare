@@ -102,17 +102,21 @@ function sourceSideSegments(
   const segments: InlineSegment[] = [];
   pushSegment(segments, { kind: 'equal', text: sourceParts.prefix });
 
-  const changes = diffWordsWithSpace(sourceParts.core, targetParts.core, {
+  // Put the side being rendered in JsDiff's "new" position. For equal chunks,
+  // JsDiff preserves the new-side spelling/casing in change.value; added chunks
+  // likewise contain source-side-only text. This keeps project-owned segments
+  // byte-for-byte reconstructable even when ignoreCase is enabled.
+  const changes = diffWordsWithSpace(targetParts.core, sourceParts.core, {
     ignoreCase: options.ignoreCase,
   });
 
   for (const change of changes) {
-    if (change.added) {
+    if (change.removed) {
       continue;
     }
 
     pushSegment(segments, {
-      kind: change.removed ? sourceOnlyKind : 'equal',
+      kind: change.added ? sourceOnlyKind : 'equal',
       text: change.value,
     });
   }
