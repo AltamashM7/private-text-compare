@@ -18,3 +18,14 @@
 - **D016 — Line comparison can ignore case and leading/trailing whitespace while retaining both raw input lines.** Internal whitespace remains meaningful.
 - **D017 — Adjacent remove/add replacement blocks pair positionally into changed rows.** Fuzzy or similarity-based line matching is intentionally deferred.
 - **D018 — Core domain behavior is protected by Vitest unit tests before Browser QA and preview deployment.** A unit-test failure blocks downstream verification stages.
+- **D019 — The main comparator is a focused Preact island inside a static Astro page.** Comparison logic remains framework-independent in `src/core/`.
+- **D020 — Comparison is explicit and button-triggered.** Editing text or comparison options after a result marks that result stale until Compare is pressed again.
+- **D021 — Compared text exists only in transient component state.** It is not persisted to browser storage, cookies, history, or URLs.
+- **D022 — Result presentation is responsive without changing the core model.** Wider screens align Original and Changed side-by-side; narrow screens stack the paired sides within each comparison row.
+- **D023 — The product uses a dark-default dual-theme visual system.** Dark is the first-visit default regardless of OS color preference; Light is an explicit user choice.
+- **D024 — Only the non-sensitive theme preference may persist in localStorage.** The `private-text-compare-theme` key may contain only `dark` or `light`; compared text, results, comparison options, and comparison history remain transient and clear on reload.
+- **D025 — The product visual identity follows a restrained precision/developer-editor direction.** Neutral chrome, minimal elevation, compact gutters, and semantic diff colors focus attention on actual text changes rather than decorative application surfaces.
+- **D026 — Theme state is applied before normal page paint.** The static document defaults to dark and a small head bootstrap restores only a valid saved theme before the page renders, preventing an avoidable light flash.
+- **D027 — Product typography uses self-hosted Geist Sans and Geist Mono from a pinned upstream release.** The two variable WOFF2 assets come from official `vercel/geist-font` tag `v1.7.1`, are served same-origin, and create no third-party runtime font request.
+- **D028 — The ambient page background uses a static CSS technical-canvas system instead of a uniform graph-paper repeat.** A minor grid, a major grid at four minor cells, aligned major-intersection nodes, restrained illumination, and spatial fading create the approved structure.
+- **D029 — Decorative canvas treatment remains non-interactive, theme-aware, and subordinate to editor surfaces.** It uses pseudo-elements and CSS only, with no runtime JavaScript renderer, image/SVG background asset, canvas element, or animation.
