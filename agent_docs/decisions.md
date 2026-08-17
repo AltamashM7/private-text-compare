@@ -18,3 +18,7 @@
 - **D016 — Line comparison can ignore case and leading/trailing whitespace while retaining both raw input lines.** Internal whitespace remains meaningful.
 - **D017 — Adjacent remove/add replacement blocks pair positionally into changed rows.** Fuzzy or similarity-based line matching is intentionally deferred.
 - **D018 — Core domain behavior is protected by Vitest unit tests before Browser QA and preview deployment.** A unit-test failure blocks downstream verification stages.
+- **D019 — The main comparator is a focused Preact island inside a static Astro page.** Comparison logic remains framework-independent in `src/core/`.
+- **D020 — Comparison is explicit and button-triggered.** Editing text or comparison options after a result marks that result stale until Compare is pressed again.
+- **D021 — Compared text exists only in transient component state.** It is not persisted to browser storage, cookies, history, or URLs.
+- **D022 — Result presentation is responsive without changing the core model.** Wider screens align Original and Changed side-by-side; narrow screens stack the paired sides within each comparison row.

@@ -6,25 +6,28 @@
 - Phase 0C cloud-native project foundation was accepted and squash-merged to `main`.
 - Phase 0D Playwright Chromium browser QA and responsive screenshot artifacts were accepted and squash-merged to `main`.
 - Phase 0E Cloudflare Pages Direct Upload PR-preview deployment was accepted and squash-merged to `main`.
+- Phase 1A framework-independent comparison engine, project-owned result types, and Vitest gate were accepted and squash-merged to `main`.
 
 ## Current
 
-- Phase 1A is implementing the first real framework-independent text comparison domain engine under `src/core/`.
-- The Phase 1A contract covers line-level matching, positional changed-line pairing, inline segments, ignore-case and ignore-surrounding-whitespace options, newline normalization, statistics, and deterministic Vitest verification.
-- The visual scaffold remains unchanged; comparator UI is not part of Phase 1A.
+- Phase 1B delivers the first usable Private Text Compare interface as a focused Preact island over the Phase 1A `compareTexts` API.
+- Current scope includes Original/Changed inputs, Compare, both approved ignore options, Swap, Clear, line/inline result rendering, statistics, responsive behavior, accessibility fundamentals, real-product Playwright flows, and responsive screenshots.
+- Compared text remains transient component state only.
 
 ## Next
 
-- Orchestrator independent review of the Phase 1A Draft PR, core contract, tests, lockfile provenance, CI, and unchanged preview page.
-- Phase 1B interactive Preact comparator UI after Phase 1A acceptance.
+- Orchestrator independent review of the Phase 1B Draft PR, browser interactions, screenshots, privacy boundaries, CI, and Cloudflare preview.
+- User Android manual QA against the stable PR preview alias.
+- After acceptance, proceed only to the next explicitly approved product phase.
 
 ## Known issues
 
-- npm reports informational `allow-scripts` warnings for some transitive install scripts during `npm ci`; prior lock generation, install, checks, builds, browser QA, and previews complete successfully.
+- npm reports informational `allow-scripts` warnings for some transitive install scripts during `npm ci`; existing verification continues to complete successfully.
 
 ## Deferred / future
 
-- Interactive comparator UI, textareas, controls, result rendering, copy/export, and local storage.
-- SEO expansion.
+- Copy-result and unified-diff/text-file export.
+- Local persistence/history and URL sharing.
+- SEO article/FAQ expansion.
 - Production Cloudflare deployment and `compare.amosfot.in` custom-domain/DNS activation.
 - Analytics, advertising, backend, accounts, and authentication.
