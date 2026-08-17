@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           PROJECTS_JSON="$(npx wrangler pages project list --json)"
-          PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(.name == "private-text-compare")' | head -n 1)"
+          PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(."Project Name" == "private-text-compare")' | head -n 1)"
 
           if [[ -z "$PROJECT_JSON" ]]; then
             echo "Cloudflare Pages project private-text-compare is absent; creating Direct Upload project."
@@ -143,7 +143,7 @@ jobs:
 
             for attempt in 1 2 3 4 5 6; do
               PROJECTS_JSON="$(npx wrangler pages project list --json)"
-              PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(.name == "private-text-compare")' | head -n 1)"
+              PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(."Project Name" == "private-text-compare")' | head -n 1)"
               if [[ -n "$PROJECT_JSON" ]]; then
                 break
               fi
@@ -159,7 +159,18 @@ jobs:
             exit 1
           fi
 
-          PRODUCTION_BRANCH="$(printf '%s' "$PROJECT_JSON" | jq -r '.production_branch // .productionBranch // empty')"
+          PROJECT_API_JSON="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare")"
+          API_SUCCESS="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.success')"
+          PRODUCTION_BRANCH="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.result.production_branch // empty')"
+
+          if [[ "$API_SUCCESS" != "true" ]]; then
+            echo "Cloudflare Pages project metadata lookup did not report success." >&2
+            printf '%s' "$PROJECT_API_JSON" | jq -c '{success, errors}' >&2
+            exit 1
+          fi
+
           if [[ "$PRODUCTION_BRANCH" != "main" ]]; then
             echo "Cloudflare Pages project has unexpected production branch: ${PRODUCTION_BRANCH:-<missing>}" >&2
             exit 1
