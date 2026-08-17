@@ -25,7 +25,11 @@ const {
         let theme = 'dark';
         try {
           const saved = localStorage.getItem(key);
-          if (saved === 'light' || saved === 'dark') theme = saved;
+          if (saved === 'light' || saved === 'dark') {
+            theme = saved;
+          } else if (saved !== null) {
+            localStorage.removeItem(key);
+          }
         } catch {}
         document.documentElement.dataset.theme = theme;
       })();

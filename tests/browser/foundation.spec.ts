@@ -180,11 +180,12 @@ test('selected light theme survives reload', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
 });
 
-test('malformed saved theme falls back to dark', async ({ page }) => {
+test('malformed saved theme falls back to dark and is discarded', async ({ page }) => {
   await openTool(page);
   await page.evaluate((key) => localStorage.setItem(key, 'system'), themeStorageKey);
   await page.reload({ waitUntil: 'networkidle' });
   expect(await currentTheme(page)).toBe('dark');
+  expect(await page.evaluate((key) => localStorage.getItem(key), themeStorageKey)).toBeNull();
 });
 
 test('theme persists while compared text and result clear on reload', async ({ page }) => {
