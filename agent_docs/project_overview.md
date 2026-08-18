@@ -10,7 +10,9 @@ Potential users include writers, editors, developers, students, reviewers, and a
 
 ## Current state
 
-Accepted through Phase 1E-A:
+Phase 1E production launch is complete and accepted. Private Text Compare is live at `https://textcompare.amosfot.in/`.
+
+The accepted MVP includes:
 
 - responsive Original/Changed comparison with line- and inline-level diff presentation;
 - ignore-case and ignore-surrounding-whitespace options, Swap, Clear, and stale-result safety;
@@ -18,15 +20,15 @@ Accepted through Phase 1E-A:
 - local Copy diff, `.diff` download, and plain-text report download actions;
 - client-side-only handling of compared text, results, option snapshots, and generated export content;
 - responsive dark-default Dark/Light presentation with self-hosted Geist typography;
-- static launch guidance plus deterministic canonical, social, WebSite JSON-LD, favicon, robots, and sitemap metadata;
+- static launch guidance plus deterministic canonical, social, `WebSite` JSON-LD, favicon, robots, and sitemap metadata;
 - permanent GitHub Actions verification with Vitest and Playwright Browser QA;
-- gated Cloudflare Pages Direct Upload previews for same-repository pull requests;
-- production host `https://textcompare.amosfot.in/` and a reviewed exact-current-main Cloudflare Pages production-release path with full provenance, Pages-domain activation, and live indexability gates.
+- gated Cloudflare Pages Direct Upload previews for same-repository pull requests, with preview noindex protection;
+- an explicit exact-current-main Cloudflare Pages production-release path with full provenance, Pages-domain ACTIVE verification, live crawler/indexability gates, and connector-readable release receipts.
 
-Accepted Phase 1E-A main is `6052bf91886458f8e4dd0fa7a8cd3e5ee94ccedf`. Phase 1E-A prepared production release but did not itself deploy production, activate the custom domain, or alter DNS.
+Accepted production code at launch is exact main `c500ef51ebe749cb5efff369174e10417cd0a871`. The authoritative successful production release is Actions run `32136540410`, deployment ID `0ea179a9-74bf-4ee1-bf17-a9d4286a541c`, immutable URL `https://0ea179a9.private-text-compare.pages.dev`. The custom production domain passed the full live verification gate and the user subsequently reported `android production QA passed.`
 
-Phase 1E-A2 is the current review-only work. It retains `workflow_dispatch(target_sha)` as a fallback and adds a connector-operable GitHub `create` trigger using retry-safe release refs `release/production/<EXACT_CURRENT_MAIN_SHA>-r<N>`. Both entry points share one dependency-free resolver, require actor `AltamashM7`, and must prove the resolved target is still exact current `origin/main` before verification and again immediately before deployment.
+Production release remains deliberate rather than automatic. The preferred connector-operable trigger is `release/production/<FULL_SHA>-r<N>` and `workflow_dispatch(target_sha)` remains the fallback. Both routes must resolve and reconfirm the exact current `origin/main` SHA. Release attempts publish commit-status context `production/private-text-compare` against the exact target SHA.
 
-Valid production attempts also publish GitHub Commit Status context `production/private-text-compare` against the exact target SHA with the exact Actions run URL. This receipt lets the Orchestrator discover and inspect a release run through the connected GitHub interface without requiring the user to provide a run ID. Only the status writer jobs receive `statuses: write`; no `contents: write` is granted.
+Production DNS remains manually managed to preserve least privilege. `textcompare.amosfot.in` uses a proxied CNAME `textcompare -> private-text-compare.pages.dev`; the deployment token remains Pages-scoped and was not granted DNS Write. Cloudflare Managed robots.txt is disabled for this deployment arrangement so repository `public/robots.txt` remains authoritative and is checked by production release verification. The old `compare.amosfot.in` plan remains superseded and must not be introduced.
 
-Phase 1E-A2 does not itself create a release trigger branch, run `workflow_dispatch`, deploy production, activate `textcompare.amosfot.in`, or modify DNS. Phase 1E is not complete until a later explicitly approved exact-current-main release succeeds and the live production domain passes provenance, domain ACTIVE, HTTPS, canonical, crawling, and indexability verification.
+MVP functionality through production launch is complete. Analytics and advertising remain unimplemented. File import, backend/accounts/authentication, compared-text history/persistence, and URL sharing remain deferred unless separately scoped and explicitly approved.
