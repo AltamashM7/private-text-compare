@@ -11,28 +11,31 @@
 - Phase 1C Copy + Export was accepted after Orchestrator review and Android QA, then squash-merged.
 - Phase 1D Launch / SEO Readiness was explicitly accepted after final-head source/diff review, successful Verify project, successful Browser QA, successful Cloudflare PR preview with exact full-SHA provenance, responsive screenshot review, Android manual QA, and explicit user merge approval. PR #10 was squash-merged.
 - Accepted Phase 1D `main`: `143fa60471f44b4b7c200b933580c3737896ceb3`. The squash commit tree matched the reviewed final PR tree exactly.
-- Final reviewed Phase 1D PR head `f500a8da340df2ade313e2c338fbb2b893a07fd2` passed run `32058578434`: Verify project job `95474316934` success, Browser QA job `95474444110` success, Deploy Cloudflare preview job `95474822433` success; 58/58 unit tests and 41/41 browser tests passed, and screenshot artifact `9297308830` contained 14 files.
-- That final-head preview was `https://0a970779.private-text-compare.pages.dev` with deployment ID `0a970779-41cc-4449-ae00-bf01f232d076`; raw Cloudflare metadata proved the full final PR SHA on branch `pr-10`, and live verification passed HTTP 200 with `X-Robots-Tag: noindex`.
-- The historical post-merge Phase 1D push-run ID is not independently retrievable through the Builder/Orchestrator connector interface; no run ID is invented or presented as verified for that event.
+- Phase 1E-A production-release preparation was accepted and squash-merged as PR #11.
+- Accepted Phase 1E-A `main`: `6052bf91886458f8e4dd0fa7a8cd3e5ee94ccedf`.
+- Phase 1E-A established the production host `https://textcompare.amosfot.in/`, exact-current-main `workflow_dispatch` fallback, full Cloudflare production provenance, Pages custom-domain association/ACTIVE polling, and production indexability gates without running a production release.
 
 ## Current
 
-- Phase 1E — Production Release is current.
-- Phase 1E-A is implemented for review on `phase-1e/production-release` / Draft PR #11 and is not accepted or merged.
-- Starting Phase 1E-A baseline: accepted Phase 1D `main` `143fa60471f44b4b7c200b933580c3737896ceb3`.
-- Production canonical host is `https://textcompare.amosfot.in/`. The earlier `https://compare.amosfot.in/` host was planned only, never activated, and is superseded; there is no legacy URL to migrate or redirect.
-- Phase 1E-A prepares a manual `workflow_dispatch` release mechanism requiring an exact reviewed current-main `target_sha`. Pull requests and normal main pushes cannot run the production job.
-- The prepared production path keeps Cloudflare Pages Direct Upload, verifies full deployment provenance from raw Cloudflare API metadata, then uses the Pages Custom Domain API idempotently and waits for `textcompare.amosfot.in` to become ACTIVE before live production/indexability checks.
-- No direct DNS mutation, broader Cloudflare permissions, Cloudflare Git integration, dependency change, production deployment, or custom-domain activation is part of Phase 1E-A PR execution.
-- Fresh PR #11 Verify → Browser QA → Cloudflare PR preview success is the required authoritative verification gate for the accepted Phase 1D tree plus the bounded Phase 1E-A changes. The production job must be skipped on the PR.
+- Phase 1E — Production Release remains current and incomplete.
+- Phase 1E-A2 is the current review-only bridge work on `phase-1e/release-trigger-bridge`.
+- Starting Phase 1E-A2 baseline is accepted Phase 1E-A `main` `6052bf91886458f8e4dd0fa7a8cd3e5ee94ccedf`.
+- `workflow_dispatch(target_sha)` remains supported as a fallback release trigger.
+- Phase 1E-A2 additionally prepares a connector-operable GitHub `create` trigger using release refs `release/production/<FULL_SHA>-r<N>` with exact actor/ref/SHA validation and fresh current-`origin/main` checks before verification and again immediately before deployment.
+- The pure resolver lives at `.github/scripts/resolve-production-target.sh`; its dependency-free contract test invokes the real resolver during normal Verify.
+- Valid production attempts publish commit-status context `production/private-text-compare` against the resolved target SHA. The status `target_url` points to the exact Actions run so the Orchestrator connector can discover and inspect the release run without user-supplied run IDs.
+- Only status-writing jobs receive `statuses: write`; global workflow permissions remain `contents: read`, and no `contents: write` permission is introduced.
+- The accepted Phase 1E-A Cloudflare Pages Direct Upload, full production provenance, Pages-domain, bounded ACTIVE polling, and live indexability logic otherwise remains unchanged.
+- Phase 1E-A2 itself must not create a `release/production/...` branch, invoke `workflow_dispatch`, deploy production, associate/activate `textcompare.amosfot.in`, or alter DNS.
 
 ## Next
 
-- Complete and inspect the exact final-head PR #11 verification chain and screenshot artifact.
-- Orchestrator independently reviews PR #11. Do not mark ready or merge without separate explicit authorization.
-- Phase 1E-A acceptance/merge still does not launch production.
-- After an accepted Phase 1E-A merge, a later deliberate `workflow_dispatch` must target the exact current `main` SHA and pass production provenance, Pages-domain ACTIVE, HTTPS, canonical, crawling, and indexability gates.
-- Do not mark Phase 1E completed until that exact-main production release and live-domain verification succeeds.
+- The A2 Draft PR must pass the normal Verify → Browser QA → Cloudflare PR preview chain on its exact final head.
+- Require resolver contract tests, `git diff --check`, `npm ci`, Astro/TypeScript check, 58/58 unit tests, 41/41 browser tests, static build, 14-screenshot artifact, exact full-SHA preview provenance, HTTP 200, and preview `X-Robots-Tag: noindex`.
+- Production/status release jobs must be skipped on the A2 PR; no production status may falsely report PR success.
+- Orchestrator independently reviews the A2 diff and CI. Do not mark ready or merge without separate explicit authorization.
+- After A2 is separately accepted and merged, a later explicit user approval may authorize creation of `release/production/<EXACT_CURRENT_MAIN_SHA>-r1` (or a later retry suffix). Only that later release attempt may deploy production.
+- Do not mark Phase 1E completed until an actual exact-current-main production release succeeds and `https://textcompare.amosfot.in/` passes full provenance, domain ACTIVE, HTTPS, canonical, crawling, and indexability verification.
 
 ## Known issues
 
