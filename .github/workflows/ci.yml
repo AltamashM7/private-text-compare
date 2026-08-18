@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: bash .github/scripts/test-resolve-production-target.sh
 
-      - name: Resolve and guard production target
+      - name: Resolve production target
         id: release-target
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'create'
         shell: bash
@@ -58,6 +58,17 @@ jobs:
 
           TARGET_SHA="$(bash .github/scripts/resolve-production-target.sh)"
           git cat-file -e "${TARGET_SHA}^{commit}"
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "Production target resolved."
+
+      - name: Guard exact current main
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'create'
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.release-target.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_SHA"
           git fetch --no-tags origin main
           CURRENT_MAIN="$(git rev-parse refs/remotes/origin/main)"
 
@@ -66,8 +77,7 @@ jobs:
             exit 1
           fi
 
-          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
-          echo "Production target resolved and verified against exact current origin/main."
+          echo "Production target verified against exact current origin/main."
 
       - name: Check committed PR diff whitespace
         if: github.event_name == 'pull_request'
