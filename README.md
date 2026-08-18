@@ -2,11 +2,15 @@
 
 Private Text Compare is a privacy-first, client-side text comparison and diff checker. It is designed for immediate use without accounts, with compared text remaining in the browser and not being persisted by default.
 
+**Live:** https://textcompare.amosfot.in/
+
 ## Status
 
-The current product includes working Original/Changed text comparison, line- and inline-level diff presentation, ignore-case and ignore-surrounding-whitespace options, Swap and Clear, stale-result safety, local Copy diff, local `.diff` download, and local plain-text report download.
+The MVP through production launch is complete. The current product includes working Original/Changed text comparison, line- and inline-level diff presentation, ignore-case and ignore-surrounding-whitespace options, Swap and Clear, stale-result safety, local Copy diff, local `.diff` download, and local plain-text report download.
 
-The interface is responsive in Dark and Light themes, uses self-hosted Geist typography, and remains static-first. Permanent GitHub Actions verification covers type/build/unit/browser QA, while Cloudflare Pages Direct Upload provides gated pull-request previews.
+The interface is responsive in Dark and Light themes, uses self-hosted Geist typography, and remains static-first. Permanent GitHub Actions verification covers type/build/unit/browser QA, while Cloudflare Pages Direct Upload provides gated pull-request previews and explicit exact-current-main production releases. Pull-request previews remain noindex; production is indexable.
+
+Compared text is not sent to an application backend or persisted by default. Analytics, ads, accounts, backend services, history, URL sharing, and file import are not part of the launched MVP.
 
 ## Technology
 
@@ -15,7 +19,8 @@ The interface is responsive in Dark and Light themes, uses self-hosted Geist typ
 - Tailwind CSS 4 via the Vite plugin
 - strict TypeScript
 - framework-independent comparison and export logic under `src/core/`
+- Cloudflare Pages Direct Upload controlled by GitHub Actions
 
 ## Verification
 
-GitHub is the source of truth and GitHub Actions is the shared build/check environment. See `agent_docs/` for durable project architecture, decisions, and progress.
+GitHub is the source of truth and GitHub Actions is the shared build/check environment. See `agent_docs/` for durable project architecture, decisions, production-release operations, and progress.
