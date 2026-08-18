@@ -1,54 +1,90 @@
 # Latest session work
 
-## Phase 1E-A production-release preparation handoff
+## Phase 1E-A2 connector-operable production release trigger
 
 ### Accepted starting state
 
-- Phase 1D Launch / SEO Readiness is accepted and squash-merged.
-- Accepted Phase 1D `main`: `143fa60471f44b4b7c200b933580c3737896ceb3`.
-- The squash commit tree matched the reviewed final PR #10 tree exactly.
-- Acceptance followed final-head source/diff review, Verify success, Browser QA success, Cloudflare preview success with exact provenance, responsive screenshot review, Android manual QA, and explicit user merge approval.
-- Final reviewed PR #10 head `f500a8da340df2ade313e2c338fbb2b893a07fd2` passed workflow run `32058578434`: Verify job `95474316934`, Browser QA job `95474444110`, and preview job `95474822433` all succeeded; 58/58 unit tests and 41/41 browser tests passed.
-- Final-head screenshot artifact `9297308830` contained 14 files. Final-head preview deployment `0a970779-41cc-4449-ae00-bf01f232d076` at `https://0a970779.private-text-compare.pages.dev` proved the full PR-head SHA on `pr-10` and passed HTTP 200/noindex verification.
-- The historical post-merge Phase 1D push-run ID is not independently retrievable through the available Builder/Orchestrator connector interface, so no such run ID is invented or presented as verified.
+- Phase 1E-A was accepted and squash-merged as PR #11.
+- Accepted Phase 1E-A `main`: `6052bf91886458f8e4dd0fa7a8cd3e5ee94ccedf`.
+- Phase 1E-A established `https://textcompare.amosfot.in/` as the production host and installed an exact-current-main `workflow_dispatch` release path with the accepted Cloudflare Pages Direct Upload, raw full-SHA provenance, Pages custom-domain activation polling, and production indexability gates.
+- Phase 1E-A did not deploy production, activate the custom domain, or alter DNS.
 
-### Current Phase 1E-A work
+### Current Phase 1E-A2 work
 
-- Branch: `phase-1e/production-release`.
-- Draft PR: #11 targeting `main`.
-- Starting baseline remains `143fa60471f44b4b7c200b933580c3737896ceb3`.
-- Production hostname is now `https://textcompare.amosfot.in/`.
-- `https://compare.amosfot.in/` was planned only, never activated, and is superseded; no redirect or migration is required.
+- Branch: `phase-1e/release-trigger-bridge`.
+- Phase 1E-A2 is review-only and adds a connector-operable release trigger without changing product/runtime application files.
+- `workflow_dispatch(target_sha)` remains supported as fallback.
+- The added GitHub `create` event becomes meaningful only for release-looking branch refs; unrelated branch/tag creates skip meaningful jobs.
+- The exact accepted release-ref grammar is `^release/production/([0-9a-f]{40})-r([1-9][0-9]*)$`.
+- Release actor must be exactly `AltamashM7`.
+- The embedded branch SHA must equal the create-event SHA, and every actual release must still prove that target equals freshly fetched current `origin/main` before verification and again immediately before deployment.
 
-Phase 1E-A changes only launch-origin configuration/tests, the existing GitHub Actions workflow, and durable documentation. Comparison/export behavior, UI/theme/fonts, privacy/storage semantics, dependencies, and lockfile are unchanged.
+### Pure release-target resolver
 
-### Canonical/SEO update
+`.github/scripts/resolve-production-target.sh` is the shared deterministic resolver for both supported production triggers. It has no network calls, no secret handling, and prints only the resolved full lowercase 40-character target SHA on stdout when valid.
 
-- Astro `site` is `https://textcompare.amosfot.in`.
-- `BaseLayout.astro` derives both canonical and WebSite JSON-LD site root from `Astro.site`, reducing duplicate hostname state.
-- `robots.txt` points to `https://textcompare.amosfot.in/sitemap.xml`.
-- `sitemap.xml` contains only `https://textcompare.amosfot.in/`.
-- Browser SEO tests require canonical, `og:url`, WebSite JSON-LD, robots, and sitemap values for the new host; localhost/Pages preview origins remain rejected.
-- The obsolete host check uses the full origin `https://compare.amosfot.in` / URL-origin comparison rather than the unsafe bare hostname substring contained inside `textcompare.amosfot.in`.
-- Phase 1D metadata/schema restrictions remain unchanged.
+For `workflow_dispatch` it requires actor `AltamashM7`, a full lowercase 40-character `target_sha`, and equality between that input and the event SHA. The workflow separately preserves the `refs/heads/main` requirement.
 
-### Manual release architecture
+For `create` it requires actor `AltamashM7`, `ref_type == branch`, the exact release-ref regex, and equality between the embedded SHA and event SHA.
 
-The existing `.github/workflows/ci.yml` now declares required `workflow_dispatch.inputs.target_sha`. Verify project and Browser QA still run for pull requests, main pushes, and manual dispatches. The existing preview job remains same-repository PR-only.
+`.github/scripts/test-resolve-production-target.sh` invokes the real helper and covers valid dispatch/r1/r2 plus invalid actor, tag create, ordinary/wrong-prefix/missing-suffix branches, r0, negative/garbage retry suffixes, uppercase/short SHA, branch/event SHA mismatch, dispatch/event SHA mismatch, and unsupported event. It performs no GitHub or Cloudflare request.
 
-The manual dispatch guard requires `refs/heads/main`, a full 40-character SHA, exact equality with `github.sha`, and a fresh `origin/main` fetch proving the input is still current main. The production job repeats that exact-current-main check after checking out the dispatched SHA.
+### Workflow event matrix
 
-`Deploy Cloudflare production` has `needs: browser-qa` and runs only when `github.event_name == 'workflow_dispatch'`. It reuses the existing pinned actions, Wrangler `4.123.0`, existing Cloudflare secrets, and Pages project `private-text-compare`. The prepared Direct Upload command associates `dist` with branch `main` and exact `target_sha`.
+```text
+pull_request main
+  -> Verify -> Browser QA -> Cloudflare PR preview
+  -> production/status-release jobs skipped
 
-After deployment, raw Cloudflare deployment API metadata must prove the full 40-character target SHA, production environment, main branch, and exact deployment URL. Only then may the workflow inspect Pages custom domains. An unexpected `compare.amosfot.in` association fails without mutation; `textcompare.amosfot.in` is added only if absent, then polled for a bounded period until ACTIVE. There are no DNS mutation calls and no permission broadening.
+push main
+  -> Verify -> Browser QA
+  -> preview/production/status-release jobs skipped
 
-Once ACTIVE, live gates require production HTTP 200, product markers, exact canonical and WebSite JSON-LD URL, exact robots/sitemap responses, no localhost/Pages canonical, no HTML noindex, and no `X-Robots-Tag: noindex`. PR previews continue to require `X-Robots-Tag: noindex`.
+workflow_dispatch
+  -> resolver + refs/heads/main + exact-current-origin/main guard
+  -> Verify -> Browser QA -> pending release status -> production -> final release status
 
-### Acceptance boundary
+valid release branch create
+  -> resolver + exact-current-origin/main guard
+  -> Verify -> Browser QA -> pending release status -> production -> final release status
 
-- Phase 1E-A PR #11 is review-only and must remain Draft/unmerged until separate authorization.
-- This PR must run only the normal Verify → Browser QA → Cloudflare PR preview chain; its production job must be skipped.
-- No `workflow_dispatch` is to be run during Phase 1E-A PR verification.
-- No production deployment, Pages custom-domain association, domain activation, or DNS change occurs in this PR.
-- Fresh final-head PR #11 CI is the authoritative verification of the accepted Phase 1D tree plus these bounded Phase 1E-A changes.
-- Phase 1E is not complete after Phase 1E-A merge; completion requires a later exact-current-main manual production release and successful live-domain/provenance/indexability verification.
+unrelated create
+  -> meaningful jobs skipped
+```
+
+Invalid refs that begin with `release/production/` enter Verify only so the central resolver can reject them explicitly; they cannot reach production.
+
+### Connector-readable status receipt
+
+The production receipt context is exactly `production/private-text-compare`, written against the resolved production target SHA.
+
+The pending status is published after Verify succeeds:
+
+- `pending`
+- `Production release running`
+
+An `if: always()` finalizer publishes:
+
+- `success` / `Production release verified` only when Verify, Browser QA, the pending status job, and production all succeeded;
+- otherwise `failure` / `Production release failed` when a valid release target was resolved.
+
+Every receipt points to `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}` so the Orchestrator can poll the target commit's statuses, discover the exact workflow run URL, then inspect jobs/logs independently.
+
+Only the status-writing jobs receive `permissions: { contents: read, statuses: write }`. Global workflow permissions remain `contents: read`; no job receives `contents: write`.
+
+### Production deployment boundary
+
+The accepted Phase 1E-A production body is preserved except that its exact target SHA now comes from the shared resolver rather than directly from `inputs.target_sha`, allowing the same deployment path for dispatch and valid connector-created release refs.
+
+The production job still needs Browser QA, checks out the event SHA, reruns the resolver, proves checkout == resolved target, fetches current `origin/main`, refuses stale/non-main targets, performs `npm ci` and the exact build, verifies Pages project and `production_branch == main`, uses pinned Wrangler `4.123.0` Direct Upload with branch `main` and the exact resolved SHA, proves raw full-SHA production provenance, only then handles the approved Pages custom domain, rejects unexpected `compare.amosfot.in`, performs no direct DNS mutation, waits the existing bounded period for ACTIVE, and requires all accepted live HTTPS/canonical/crawling/indexability gates including absence of production `X-Robots-Tag: noindex`.
+
+PR preview behavior remains unchanged and continues to require `X-Robots-Tag: noindex`.
+
+### A2 acceptance boundary
+
+- Do not create any `release/production/...` branch during A2 review.
+- Do not run `workflow_dispatch` during A2 review.
+- Do not deploy production, mutate Pages custom-domain state, activate `textcompare.amosfot.in`, or touch DNS during A2 review.
+- The A2 Draft PR must pass normal Verify → Browser QA → Cloudflare PR preview on the exact final head, including resolver contract tests, 58/58 unit tests, 41/41 browser tests, the existing screenshot artifact, exact preview provenance, HTTP 200, and preview noindex.
+- Production and release-status jobs must be skipped on the A2 PR.
+- Phase 1E remains incomplete until a later explicitly approved exact-current-main production attempt succeeds and the live production domain passes all gates.
