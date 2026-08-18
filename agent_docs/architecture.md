@@ -2,102 +2,100 @@
 
 ## Application
 
-- Astro remains the static-first framework and production output remains static.
-- The primary comparison experience is the focused Preact island `src/components/TextCompareTool.tsx`, hydrated with `client:load` from the static index page.
-- The island consumes the project-owned `compareTexts` API from `src/core/compare/`; JsDiff remains an internal core primitive and is not imported by UI code.
-- Phase 1C adds `src/core/export/` as a framework-independent serializer layer downstream from `src/core/compare/`. It consumes project-owned `ComparisonResult` values and returns unified-diff or plain-text report strings without browser APIs or a second comparison pass.
-- A small `src/components/ThemeToggle.tsx` Preact island controls the non-sensitive visual theme preference without hydrating the rest of the static page.
-- Phase 1D launch content is rendered as static Astro HTML below `TextCompareTool`; it adds no component hydration and no new application data flow.
-- Tailwind CSS 4 remains available, while the product visual system is expressed primarily through semantic CSS tokens and focused stylesheet layers rather than framework-color classes scattered through the comparator.
-- Framework-independent comparison/domain/export behavior remains under `src/core/` and is protected by Vitest.
-
-The comparison/export data flow remains:
-
-```text
-transient inputs
-    ↓
-compareTexts
-    ↓
-ComparisonResult
-    ├─ UI rendering
-    └─ core export serializers
-          ├─ unified diff string
-          └─ plain-text report string
-```
-
-Clipboard and Blob handling exists only at the UI/browser boundary. The UI calls the core serializers and then, after an explicit user action, either writes the generated unified diff with `navigator.clipboard.writeText(...)` or starts a local Blob download. Core export code does not know about Clipboard APIs, `Blob`, `document`, `window`, object URLs, storage, or network APIs. Phase 1D does not change this path.
+- Astro remains static-first and production output remains static.
+- `src/components/TextCompareTool.tsx` is the focused Preact comparator island; comparison/domain behavior stays framework-independent under `src/core/compare/` and export serialization under `src/core/export/`.
+- `ThemeToggle.tsx` is the only other hydrated island. Phase 1D launch content remains static Astro HTML below the comparator.
+- Compared text, comparison state, result rows, export strings, and option snapshots remain transient. The only approved persistence is the non-sensitive `private-text-compare-theme` value (`dark` or `light`).
+- Copy remains explicit clipboard write only; downloads remain local Blob/object-URL actions. No compared text or export payload is sent to an application backend, persisted, logged, or encoded in URLs.
 
 ## Launch content and SEO
 
-- `astro.config.mjs` defines the planned production site as `https://compare.amosfot.in`; this is build-time canonical configuration only and does not activate production deployment or DNS.
-- `BaseLayout.astro` emits static title/description, canonical, Open Graph, Twitter summary metadata, favicon linkage, and a single deterministic `WebSite` JSON-LD object in the document head.
-- The homepage canonical resolves from Astro's configured site and pathname, so Cloudflare preview hosts do not become canonical URLs.
-- The homepage adds four static sections below the comparator: How it works, Private by design, useful before/after use cases, and visible FAQ guidance. They use semantic headings, sections, lists/articles, and require no JavaScript.
-- `public/robots.txt` allows crawling and points to `https://compare.amosfot.in/sitemap.xml`.
-- `public/sitemap.xml` currently contains only the canonical homepage and no artificial `lastmod` timestamp or preview URL.
-- `public/favicon.svg` is a small original 64×64-viewBox geometric diff mark with no external reference, font, or embedded raster asset.
-- Launch metadata intentionally does not include meta keywords, Open Graph images, Twitter account identity, Search Console tokens, FAQPage schema, ratings/reviews, offers, SearchAction, or invented company/person data.
-- Product HTML does not add meta noindex. PR preview indexing protection remains the existing Cloudflare deployment-layer `X-Robots-Tag: noindex` behavior.
+- `astro.config.mjs` defines the production site as `https://textcompare.amosfot.in`; this drives deterministic production canonical/social site identity at build time.
+- `BaseLayout.astro` derives both the homepage canonical and the single `WebSite` JSON-LD URL from `Astro.site`, avoiding a second hardcoded production-host value in the layout.
+- The accepted Phase 1D metadata remains deliberately narrow: exact title/description, canonical, Open Graph, Twitter summary metadata, favicon linkage, and exactly one `WebSite` JSON-LD object. There is no FAQPage, SoftwareApplication, rating/review, offer, SearchAction, meta keywords, Search Console token, or Open Graph image.
+- `public/robots.txt` allows crawling and points to `https://textcompare.amosfot.in/sitemap.xml`; `public/sitemap.xml` contains only `https://textcompare.amosfot.in/`.
+- The earlier `https://compare.amosfot.in/` value was a Phase 1D plan only, was never activated, and is superseded. Browser QA rejects that obsolete full origin without using the unsafe bare-host substring that is contained inside `textcompare.amosfot.in`.
+- Product HTML contains no meta noindex. PR previews remain protected by deployment-layer `X-Robots-Tag: noindex`; production must be indexable.
 
-## Visual system, typography, and themes
+## Visual system and assets
 
-- The product uses an explicit dark-default dual-theme system: `html[data-theme="dark"]` and `html[data-theme="light"]` map the same semantic tokens for page/surface/border/text/action/focus and diff states.
-- Dark is the first-visit default regardless of OS `prefers-color-scheme`. A small inline script in `BaseLayout.astro` runs in the document head before normal page paint, safely reads only `private-text-compare-theme`, and applies a valid saved `dark` or `light` value. Missing, malformed, unsupported, or unreadable preference state falls back to dark; unsupported stored values are discarded.
-- Product/UI typography uses self-hosted Geist Sans. Editor/diff/code-like typography uses self-hosted Geist Mono. The two variable WOFF2 files are copied unmodified from the official `vercel/geist-font` release tag `v1.7.1`, are served from `/fonts/geist/` on the same Private Text Compare origin, and are preloaded above the fold. The repository retains the SIL Open Font License 1.1 and a concise provenance record. There is no runtime font CDN or third-party font request.
-- `src/styles/refinement.css` layers the Geist typography, technical-canvas refinement, compact result actions, and restrained launch-content spacing/type hierarchy after the established semantic theme system.
-- Launch content uses dividers, whitespace, modest responsive grids, and the same semantic tokens rather than cards, gradients, illustrations, animation, or dashboard styling.
-- The ambient technical canvas is CSS-only and theme-aware. It combines a faint minor grid, a stronger major grid at four minor cells, nodes aligned to major-grid intersections, a restrained radial tonal lift, and CSS masking that fades the pattern toward the sides and lower page. The treatment is static, pointer-inert, and subordinate to opaque editor/result surfaces; it uses no JavaScript renderer, image asset, canvas element, SVG background file, or animation.
-- The visual identity remains a restrained precision/developer-editor utility: neutral chrome, thin borders, low elevation, shared editor surfaces, compact controls, and semantic diff color concentrated on changed text rather than general application decoration.
-- Original and Changed inputs share one editor workspace. Results use one diff-editor surface with status and line-number gutters, aligned Original/Changed columns on wider screens, and connected paired rows on narrow screens.
+The accepted dark-default dual-theme visual system, self-hosted Geist Sans/Mono fonts, static CSS technical canvas, responsive comparator layout, launch-content presentation, and local SVG favicon are unchanged by Phase 1E-A. No new visual asset, hydration island, runtime dependency, analytics, tracking, or backend path is introduced.
 
-## Directory ownership
+## Verification
 
-- `src/pages/`: static route entry points, island composition, and static launch content.
-- `src/components/`: necessary interactive Preact islands, currently the comparator and theme toggle; browser-only clipboard/download orchestration stays here.
-- `src/layouts/`: shared Astro document/layout structure, static launch metadata, font preloads, and pre-paint theme bootstrap.
-- `src/styles/`: semantic theme tokens, responsive visual system, Geist typography, CSS-only technical canvas, compact result-export controls, and static launch-content presentation.
-- `src/core/compare/`: framework-independent comparison/domain logic and unit tests.
-- `src/core/export/`: framework-independent deterministic serialization of `ComparisonResult` values and unit tests.
-- `public/fonts/geist/`: the two vendored Geist variable WOFF2 assets plus retained OFL license and provenance record.
-- `public/favicon.svg`, `public/robots.txt`, `public/sitemap.xml`: static launch identity and crawling assets.
-- `tests/browser/`: Playwright interaction, theme/privacy behavior, font/network assertions, export workflows, SEO/semantic/runtime checks, and responsive visual QA.
-- `agent_docs/`: durable project context and handoff state.
-- `.github/workflows/`: verification and approved preview deployment automation.
+`Verify project` remains the permanent first gate and runs committed-diff whitespace checking for PR/push events, `npm ci`, Astro/TypeScript checking, all Vitest suites, and a static build. `Browser QA` still follows Verify and runs Playwright Chromium against the built site, including the existing 14 screenshot captures.
 
-## Export semantics
+SEO/browser coverage requires the final production canonical, Open Graph URL, WebSite JSON-LD URL, robots sitemap, and sole sitemap location to use `https://textcompare.amosfot.in/`; it rejects localhost, `pages.dev`, and the obsolete full origin `https://compare.amosfot.in`.
 
-Unified-diff export is comparison-aware rather than a second strict diff. It maps semantic `ComparisonRow` state directly, uses three semantic context rows before and after changed/added/removed regions, merges overlapping or touching context windows, and emits separate hunks for distant changes. Hunk range counts use Original/Changed line consumption rather than rendered diff-line count.
+Same-repository PR previews remain `Verify project → Browser QA → Deploy Cloudflare preview`. Preview deployment remains branch `pr-<number>`, uses Direct Upload, verifies HTTP 200 and current product markers, requires `X-Robots-Tag: noindex`, checks the generated production canonical metadata, and proves the exact full PR-head SHA through raw Cloudflare deployment metadata.
 
-When ignore-case or ignore-surrounding-whitespace makes raw Original/Changed lines semantically unchanged, export preserves that decision. The `.diff` output may therefore not be a byte-for-byte patch capable of recreating raw Changed input when ignored raw differences exist. This is intentional: Phase 1C exports the user's active comparison result, not a source-control patch engine. No second JsDiff pass is permitted to reveal differences the user chose to ignore.
+## Phase 1E production release path
 
-The comparison engine's existing trailing-newline model is preserved. No `\ No newline at end of file` markers are introduced.
+Phase 1E-A extends the existing `.github/workflows/ci.yml`; it does not create a second release workflow or enable Cloudflare Git integration.
 
-## State and privacy
+Normal events remain non-production:
 
-Compared text, comparison options, result rows, statistics, stale/result state, the result-option snapshot, and generated export strings remain transient in the current page session. They are not persisted to localStorage, sessionStorage, IndexedDB, cookies, history, or URLs and have no application fetch/XHR path. Refreshing the page clears entered text and results.
+```text
+pull_request -> Verify -> Browser QA -> PR preview
+push main    -> Verify -> Browser QA -> preview skipped
+```
 
-The sole approved browser persistence is the non-sensitive theme string under `private-text-compare-theme`, whose valid values are only `dark` and `light`. Theme persistence is isolated from comparison/export state and does not weaken the compared-text privacy boundary.
+A production release is reachable only through a later deliberate manual dispatch:
 
-Copy uses clipboard write only after an explicit click; application code never reads the clipboard. Download uses local Blob/object-URL mechanics only. No export payload is uploaded, transmitted, logged, retained in history, or encoded into a URL.
+```text
+workflow_dispatch(target_sha)
+    -> Verify exact-current-main guard
+    -> Verify project
+    -> Browser QA
+    -> Deploy Cloudflare production
+         -> reconfirm exact current main
+         -> npm ci + exact static build
+         -> verify Pages project + production_branch=main
+         -> Direct Upload dist with branch=main + exact target_sha
+         -> raw API full-SHA production provenance
+         -> Pages custom-domain inspection/association
+         -> bounded ACTIVE polling
+         -> live HTTPS/canonical/crawling/indexability gates
+```
 
-Phase 1D adds static content and same-origin static launch resources only. It does not add compared-text persistence/transmission, analytics, telemetry, backend calls, accounts, external runtime scripts/assets, or any new sensitive-data path. The privacy copy specifically describes compared text/export payload behavior rather than claiming that the browser makes no network requests at all.
+### Exact-main guard
 
-Font delivery does not add a privacy path: both Geist WOFF2 resources are part of the same static site and are requested from the current origin. The technical canvas is rendered entirely through CSS.
+For `workflow_dispatch`, execution fails before normal verification unless all are true:
 
-## Verification and Browser QA
+1. `github.ref == refs/heads/main`;
+2. `target_sha` is a full 40-character commit SHA;
+3. `target_sha == github.sha` for the dispatched revision;
+4. after fetching `origin/main`, `target_sha` still equals the current remote main SHA.
 
-GitHub Actions remains authoritative. `Verify project` runs committed-diff whitespace checking, `npm ci`, Astro/TypeScript checking, all core Vitest suites, and static build. Playwright exercises the real comparator controls and comparison output plus theme behavior: dark first visit independent of OS preference, pre-hydration dark document state, both toggle directions, saved preference reload, malformed-value fallback/cleanup, and proof that theme persistence does not preserve compared text or result state.
+The production job repeats the ref/SHA/current-main checks after its own exact-SHA checkout so a stale or moved main cannot be deployed.
 
-Phase 1C browser coverage proves export controls are absent without a result; exact unified-diff clipboard content after explicit activation; stale-result disabling/re-enable behavior; exact `.diff` and `.txt` filenames and contents through Playwright download events; Swap/Clear removal of export actions; approved storage remains theme-only; sessionStorage stays unused; and export actions produce no fetch/XHR application request.
+### Cloudflare production deployment
 
-A focused font/browser test waits for `document.fonts.ready`, verifies both Geist families resolve, checks computed UI/editor font-family mappings, proves both WOFF2 resources return HTTP 200 from the same origin, rejects known external font/CDN hosts in page resource entries, checks the technical-canvas structure, and preserves the no-horizontal-overflow/error checks.
+The production job needs Browser QA and has `if: github.event_name == 'workflow_dispatch'`, so pull requests and normal pushes show it as skipped. Permissions remain `contents: read`. It reuses the existing pinned checkout/setup-node/Wrangler action SHAs, Wrangler `4.123.0`, repository Cloudflare secrets, and Pages project `private-text-compare`; no npm dependency is added.
 
-Phase 1D browser coverage verifies the built site's exact title/description/canonical/social metadata, parses the `WebSite` JSON-LD, validates favicon/robots/sitemap responses, rejects preview/localhost canonical and sitemap values, proves exactly one H1 and the required static sections/FAQ exist, verifies launch content adds no hydrated island, rejects HTML meta noindex, and asserts initial runtime requests remain same-origin.
+The Direct Upload command design is:
 
-Responsive visual QA preserves the existing ten full-page comparator screenshots and adds four viewport screenshots focused on the launch-content region: Dark/Light desktop 1440×900 and Dark/Light mobile portrait 390×844. Screenshots remain CI artifacts and are not committed.
+`pages deploy dist --project-name=private-text-compare --branch=main --commit-hash=<exact target_sha>`
 
-## Development and deployment
+The job verifies the project exists and its `production_branch` is still exactly `main`. After deployment it requires raw Cloudflare API metadata for the deployment just created to prove `environment=production`, `branch=main`, the full 40-character `commit_hash` equals `target_sha`, and the deployment URL equals the Wrangler action output. Wrangler's seven-character display is not sufficient provenance.
 
-The existing Cloudflare Pages Direct Upload architecture is unchanged. Same-repository PR previews remain gated behind `Verify project` and `Browser QA`, use branch `pr-<PR number>`, and receive an immutable deployment URL plus stable alias. Live curl verification targets the immutable deployment URL, checks current durable product markers, HTTP 200, and `X-Robots-Tag: noindex`; browser interaction, same-origin font delivery, theming, export workflows, and Phase 1D metadata/content checks remain Playwright's responsibility.
+### Custom-domain boundary
 
-Production deployment remains separately gated and non-automatic. Phase 1D configures `https://compare.amosfot.in/` as the planned canonical production site for generated metadata, robots, and sitemap, but does not attach or activate the custom domain, change DNS, or deploy production.
+Only after exact production provenance succeeds does the job list Pages custom domains. If `compare.amosfot.in` unexpectedly exists on the project, the job fails without deleting or mutating it. If `textcompare.amosfot.in` is already associated, it is reused; otherwise it is added through the Pages Custom Domain API. No direct DNS create/edit/delete call exists in the workflow and no broader token permission is requested.
+
+The job polls the Pages domain status for a bounded period and proceeds only when status is ACTIVE. If it remains initializing, pending, error, blocked, deactivated, or otherwise non-active, the job fails with safe status/validation details. A successful production deployment is not rolled back merely because domain activation is incomplete.
+
+### Production indexability boundary
+
+After the domain is ACTIVE, HTTPS verification requires:
+
+- homepage HTTP 200 and current Private Text Compare product markers;
+- canonical exactly `https://textcompare.amosfot.in/`;
+- exactly one `WebSite` JSON-LD whose URL is exactly the production homepage;
+- `robots.txt` HTTP 200 with the exact production sitemap directive;
+- `sitemap.xml` HTTP 200 with exactly the production homepage;
+- no localhost or `pages.dev` canonical;
+- no HTML meta robots noindex;
+- no `X-Robots-Tag: noindex` on the production custom domain.
+
+Phase 1E-A only installs and reviews this path. It does not execute `workflow_dispatch`, deploy production, associate a custom domain, or change DNS. Phase 1E remains incomplete until a later accepted exact-main release passes every live gate.
