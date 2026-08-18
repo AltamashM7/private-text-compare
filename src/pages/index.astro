@@ -2,12 +2,12 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TextCompareTool from '../components/TextCompareTool';
 import ThemeToggle from '../components/ThemeToggle';
+
+const pageTitle = 'Private Text Compare — Compare Text Online Privately';
+const pageDescription = 'Compare two versions of text with line-by-line and word-level highlights directly in your browser. No uploads, accounts, or tracking.';
 ---
 
-<BaseLayout
-  title="Private Text Compare — Compare Text Online Privately"
-  description="Compare two versions of text and see line-by-line and word-level changes directly in your browser."
->
+<BaseLayout title={pageTitle} description={pageDescription}>
   <div class="page-frame">
     <header class="site-header">
       <a href="/" class="brand-mark">Private Text Compare</a>
@@ -30,6 +30,88 @@ import ThemeToggle from '../components/ThemeToggle';
     </section>
 
     <TextCompareTool client:load />
+
+    <div class="launch-content" aria-label="About Private Text Compare">
+      <section class="launch-section" id="how-it-works" aria-labelledby="how-it-works-title">
+        <div class="launch-section-heading">
+          <p class="section-kicker">Workflow</p>
+          <h2 id="how-it-works-title">How it works</h2>
+        </div>
+        <ol class="how-steps">
+          <li>
+            <h3>Paste both versions</h3>
+            <p>Paste the original text and the changed version into the two editors.</p>
+          </li>
+          <li>
+            <h3>Choose comparison options</h3>
+            <p>Choose whether case or surrounding whitespace should be ignored.</p>
+          </li>
+          <li>
+            <h3>Review and export locally</h3>
+            <p>Compare the versions, review line and word changes, then optionally copy the unified diff or download the local <code>.diff</code> or <code>.txt</code> output.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="launch-section launch-section--split" id="private-by-design" aria-labelledby="private-by-design-title">
+        <div class="launch-section-heading">
+          <p class="section-kicker">Privacy boundary</p>
+          <h2 id="private-by-design-title">Private by design</h2>
+        </div>
+        <div class="privacy-copy">
+          <p>The text you compare is processed locally in your browser. Pasted Original and Changed text is not uploaded to a Private Text Compare backend.</p>
+          <p>Compared text, comparison results, option snapshots, and generated export content remain transient for the current page session and clear on refresh. Only the existing dark/light theme preference may persist locally.</p>
+          <p>Copy and download happen only after explicit user actions. Application clipboard access is write-only, and downloads are created locally from the generated output.</p>
+        </div>
+      </section>
+
+      <section class="launch-section" id="common-uses" aria-labelledby="common-uses-title">
+        <div class="launch-section-heading">
+          <p class="section-kicker">Common uses</p>
+          <h2 id="common-uses-title">Useful for quick before-and-after checks</h2>
+        </div>
+        <ul class="use-list">
+          <li>Writing and editing revisions</li>
+          <li>Essays, reports, and notes</li>
+          <li>Code and configuration snippets</li>
+          <li>AI-generated rewrite comparisons</li>
+          <li>Emails, policies, and other short business text</li>
+        </ul>
+      </section>
+
+      <section class="launch-section" id="faq" aria-labelledby="faq-title">
+        <div class="launch-section-heading">
+          <p class="section-kicker">Reference</p>
+          <h2 id="faq-title">Frequently asked questions</h2>
+        </div>
+        <div class="faq-list">
+          <article class="faq-item">
+            <h3>Is my text uploaded or stored?</h3>
+            <p>No. The compared Original and Changed text is processed locally in the browser, is not uploaded to a Private Text Compare backend, and clears when the page is refreshed.</p>
+          </article>
+          <article class="faq-item">
+            <h3>Do I need an account?</h3>
+            <p>No. The current tool works without an account or sign-in.</p>
+          </article>
+          <article class="faq-item">
+            <h3>What does “Ignore case” do?</h3>
+            <p>It treats case-only differences such as <code>Hello</code> and <code>hello</code> as unchanged when you compare.</p>
+          </article>
+          <article class="faq-item">
+            <h3>What does “Ignore surrounding whitespace” do?</h3>
+            <p>It ignores leading and trailing whitespace on each line. Whitespace inside the line remains meaningful.</p>
+          </article>
+          <article class="faq-item">
+            <h3>Can I save or export my comparison?</h3>
+            <p>You can copy the unified diff, download a local <code>.diff</code> file, or download a plain-text report. The site itself does not retain comparison history.</p>
+          </article>
+          <article class="faq-item">
+            <h3>Can I compare files directly?</h3>
+            <p>Not currently. Direct file import is not available, so paste the text you want to compare into the Original and Changed editors.</p>
+          </article>
+        </div>
+      </section>
+    </div>
 
     <footer class="site-footer">
       Your text is processed locally in this page session and clears on refresh.
