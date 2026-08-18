@@ -12,12 +12,13 @@ const {
   description = 'Compare two versions of text privately in your browser.',
 } = Astro.props;
 
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).toString();
+const siteRoot = new URL('/', Astro.site ?? Astro.url.origin).toString();
+const canonicalUrl = new URL(Astro.url.pathname, siteRoot).toString();
 const websiteStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Private Text Compare',
-  url: 'https://compare.amosfot.in/',
+  url: siteRoot,
   description,
 };
 ---

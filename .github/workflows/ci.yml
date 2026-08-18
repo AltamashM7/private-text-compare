@@ -7,6 +7,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact reviewed current main SHA to release to production
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +27,42 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+
+      - name: Guard manual production target
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then
+            echo "Manual production release must be dispatched from refs/heads/main." >&2
+            exit 1
+          fi
+
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "target_sha must be a full 40-character lowercase Git commit SHA." >&2
+            exit 1
+          fi
+
+          if [[ "$TARGET_SHA" != "$DISPATCH_SHA" ]]; then
+            echo "target_sha does not equal the dispatched main revision." >&2
+            exit 1
+          fi
+
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          git fetch --no-tags origin main
+          CURRENT_MAIN="$(git rev-parse refs/remotes/origin/main)"
+
+          if [[ "$TARGET_SHA" != "$CURRENT_MAIN" ]]; then
+            echo "target_sha is no longer the current origin/main revision." >&2
+            exit 1
+          fi
+
+          echo "Manual production target verified against the exact current main revision."
 
       - name: Check committed PR diff whitespace
         if: github.event_name == 'pull_request'
@@ -42,13 +84,13 @@ jobs:
           AFTER_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ "${BEFORE_SHA}" =~ ^0+$ ]]; then
+          if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
             EMPTY_TREE="$(git hash-object -t tree /dev/null)"
-            git diff --check "${EMPTY_TREE}" "${AFTER_SHA}"
+            git diff --check "$EMPTY_TREE" "$AFTER_SHA"
           else
             git cat-file -e "${BEFORE_SHA}^{commit}"
             git cat-file -e "${AFTER_SHA}^{commit}"
-            git diff --check "${BEFORE_SHA}" "${AFTER_SHA}"
+            git diff --check "$BEFORE_SHA" "$AFTER_SHA"
           fi
 
       - name: Set up Node
@@ -220,8 +262,11 @@ jobs:
               && grep -Fq 'Private Text Compare' "$BODY_FILE" \
               && grep -Fq 'Compare text without sending it anywhere.' "$BODY_FILE" \
               && grep -Fq 'No uploads · No account · No tracking' "$BODY_FILE" \
+              && grep -Fq 'rel="canonical" href="https://textcompare.amosfot.in/"' "$BODY_FILE" \
+              && grep -Fq 'property="og:url" content="https://textcompare.amosfot.in/"' "$BODY_FILE" \
+              && grep -Fq '"url":"https://textcompare.amosfot.in/"' "$BODY_FILE" \
               && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$HEADERS_FILE"; then
-              echo "Live preview verification succeeded with HTTP 200, current product markers, and X-Robots-Tag: noindex."
+              echo "Live preview verification succeeded with HTTP 200, production canonical metadata, and X-Robots-Tag: noindex."
               exit 0
             fi
             echo "Preview verification attempt $attempt not healthy yet (HTTP ${STATUS:-request-failed})."
@@ -278,3 +323,322 @@ jobs:
             exit 1
           fi
           printf '%s' "$RAW_MATCH" | jq -r '"Verified Cloudflare preview provenance: id=\(.id); environment=\(.environment); branch=\(.deployment_trigger.metadata.branch); commit=\(.deployment_trigger.metadata.commit_hash); url=\(.url)"'
+
+  deploy-production:
+    name: Deploy Cloudflare production
+    needs: browser-qa
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout exact reviewed main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Reconfirm exact current main revision
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then
+            echo "Production job may run only for refs/heads/main." >&2
+            exit 1
+          fi
+
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$TARGET_SHA" != "$DISPATCH_SHA" ]]; then
+            echo "Production target does not exactly match the dispatched full main SHA." >&2
+            exit 1
+          fi
+
+          CHECKED_OUT_SHA="$(git rev-parse HEAD)"
+          if [[ "$CHECKED_OUT_SHA" != "$TARGET_SHA" ]]; then
+            echo "Checked-out revision does not match target_sha." >&2
+            exit 1
+          fi
+
+          git fetch --no-tags origin main
+          CURRENT_MAIN="$(git rev-parse refs/remotes/origin/main)"
+          if [[ "$CURRENT_MAIN" != "$TARGET_SHA" ]]; then
+            echo "origin/main advanced after review; refusing production deployment." >&2
+            exit 1
+          fi
+
+          echo "Production target defensively reconfirmed as the exact current main revision."
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build exact production output
+        run: npm run build
+
+      - name: Verify Cloudflare Pages production project
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          PROJECTS_JSON="$(npx wrangler pages project list --json)"
+          PROJECT_JSON="$(printf '%s' "$PROJECTS_JSON" | jq -c '.[] | select(."Project Name" == "private-text-compare")' | head -n 1)"
+          if [[ -z "$PROJECT_JSON" ]]; then
+            echo "Cloudflare Pages project private-text-compare does not exist; production release will not create it." >&2
+            exit 1
+          fi
+
+          PROJECT_API_JSON="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare")"
+          API_SUCCESS="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.success')"
+          PRODUCTION_BRANCH="$(printf '%s' "$PROJECT_API_JSON" | jq -r '.result.production_branch // empty')"
+
+          if [[ "$API_SUCCESS" != "true" ]]; then
+            echo "Cloudflare Pages project metadata lookup did not report success." >&2
+            printf '%s' "$PROJECT_API_JSON" | jq -c '{success, errors}' >&2
+            exit 1
+          fi
+
+          if [[ "$PRODUCTION_BRANCH" != "main" ]]; then
+            echo "Cloudflare Pages project production_branch is not main; refusing release." >&2
+            exit 1
+          fi
+
+          echo "Cloudflare Pages production project verified: private-text-compare; production_branch=main."
+
+      - name: Deploy exact main to Cloudflare Pages production
+        id: deploy-production
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.123.0'
+          command: pages deploy dist --project-name=private-text-compare --branch=main --commit-hash=${{ inputs.target_sha }}
+
+      - name: Verify exact production deployment provenance
+        id: production-provenance
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPECTED_SHA: ${{ inputs.target_sha }}
+          EXPECTED_URL: ${{ steps.deploy-production.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_URL"
+
+          METADATA_FILE="$(mktemp)"
+          npx wrangler pages deployment list --project-name private-text-compare --environment production --json > "$METADATA_FILE"
+          node --input-type=module - "$METADATA_FILE" "$EXPECTED_SHA" "$EXPECTED_URL" <<'NODE'
+          import fs from 'node:fs';
+          const [file, sha, url] = process.argv.slice(2);
+          const deployments = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const matching = deployments.find((deployment) =>
+            deployment.Environment === 'Production'
+              && deployment.Branch === 'main'
+              && deployment.Source === sha.slice(0, 7)
+              && deployment.Deployment === url
+          );
+          if (!matching) {
+            console.error(`No Wrangler production deployment matched branch=main, source=${sha.slice(0, 7)}, url=${url}`);
+            process.exit(1);
+          }
+          console.log(`Wrangler production metadata located deployment id=${matching.Id}; full-SHA proof follows from raw API metadata.`);
+          NODE
+
+          RAW_DEPLOYMENTS="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare/deployments?env=production")"
+          RAW_MATCH="$(printf '%s' "$RAW_DEPLOYMENTS" | jq -c \
+            --arg sha "$EXPECTED_SHA" \
+            --arg url "$EXPECTED_URL" \
+            '.result[] | select(.environment == "production" and .deployment_trigger.metadata.branch == "main" and .deployment_trigger.metadata.commit_hash == $sha and .url == $url)' | head -n 1)"
+
+          if [[ -z "$RAW_MATCH" ]]; then
+            echo "Cloudflare API metadata did not prove exact full production provenance." >&2
+            exit 1
+          fi
+
+          DEPLOYMENT_ID="$(printf '%s' "$RAW_MATCH" | jq -r '.id')"
+          printf '%s' "$RAW_MATCH" | jq -r '"Verified Cloudflare production provenance: id=\(.id); environment=\(.environment); branch=\(.deployment_trigger.metadata.branch); commit=\(.deployment_trigger.metadata.commit_hash); url=\(.url)"'
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Associate and activate production custom domain
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET_DOMAIN: textcompare.amosfot.in
+          OBSOLETE_DOMAIN: compare.amosfot.in
+        run: |
+          set -euo pipefail
+          DOMAINS_ENDPOINT="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/private-text-compare/domains"
+
+          DOMAINS_JSON="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "$DOMAINS_ENDPOINT")"
+
+          if [[ "$(printf '%s' "$DOMAINS_JSON" | jq -r '.success')" != "true" ]]; then
+            echo "Cloudflare Pages custom-domain listing did not report success." >&2
+            printf '%s' "$DOMAINS_JSON" | jq -c '{success, errors}' >&2
+            exit 1
+          fi
+
+          if printf '%s' "$DOMAINS_JSON" | jq -e --arg domain "$OBSOLETE_DOMAIN" '.result[]? | select(.name == $domain)' >/dev/null; then
+            echo "Unexpected superseded custom domain is associated with this Pages project; refusing to mutate domain state." >&2
+            exit 1
+          fi
+
+          if printf '%s' "$DOMAINS_JSON" | jq -e --arg domain "$TARGET_DOMAIN" '.result[]? | select(.name == $domain)' >/dev/null; then
+            echo "Production custom domain is already associated with this Pages project; not duplicating it."
+          else
+            echo "Associating the approved production custom domain through the Pages Custom Domain API."
+            CREATE_JSON="$(curl --fail-with-body --silent --show-error \
+              --request POST \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              --header "Content-Type: application/json" \
+              --data "$(jq -nc --arg name "$TARGET_DOMAIN" '{name: $name}')" \
+              "$DOMAINS_ENDPOINT")"
+
+            if [[ "$(printf '%s' "$CREATE_JSON" | jq -r '.success')" != "true" ]]; then
+              echo "Cloudflare Pages could not associate the approved custom domain with the existing Pages-scoped credentials." >&2
+              printf '%s' "$CREATE_JSON" | jq -c '{success, errors}' >&2
+              exit 1
+            fi
+          fi
+
+          DOMAIN_ACTIVE=false
+          for attempt in $(seq 1 18); do
+            DOMAIN_JSON="$(curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              "${DOMAINS_ENDPOINT}/${TARGET_DOMAIN}")"
+
+            if [[ "$(printf '%s' "$DOMAIN_JSON" | jq -r '.success')" != "true" ]]; then
+              echo "Cloudflare Pages custom-domain status lookup failed." >&2
+              printf '%s' "$DOMAIN_JSON" | jq -c '{success, errors}' >&2
+              exit 1
+            fi
+
+            DOMAIN_STATUS="$(printf '%s' "$DOMAIN_JSON" | jq -r '.result.status // empty' | tr '[:upper:]' '[:lower:]')"
+            if [[ "$DOMAIN_STATUS" == "active" ]]; then
+              DOMAIN_ACTIVE=true
+              echo "Production custom domain is ACTIVE."
+              break
+            fi
+
+            echo "Custom-domain activation attempt $attempt remains non-active: ${DOMAIN_STATUS:-unknown}."
+            if [[ "$attempt" -lt 18 ]]; then
+              sleep 10
+            fi
+          done
+
+          if [[ "$DOMAIN_ACTIVE" != "true" ]]; then
+            echo "Production deployment remains valid, but Pages custom-domain activation did not become ACTIVE within the bounded poll." >&2
+            printf '%s' "$DOMAIN_JSON" | jq -c '{status: .result.status, validation_data: .result.validation_data, verification_data: .result.verification_data}' >&2
+            exit 1
+          fi
+
+      - name: Verify production HTTPS and indexability
+        shell: bash
+        env:
+          PRODUCTION_URL: https://textcompare.amosfot.in/
+          EXPECTED_SITEMAP: https://textcompare.amosfot.in/sitemap.xml
+        run: |
+          set -euo pipefail
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          ROBOTS_FILE="$(mktemp)"
+          SITEMAP_FILE="$(mktemp)"
+
+          STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PRODUCTION_URL")"
+          if [[ "$STATUS" != "200" ]]; then
+            echo "Production homepage did not return HTTP 200 (received $STATUS)." >&2
+            exit 1
+          fi
+
+          if grep -Eiq '^x-robots-tag:[[:space:]]*.*noindex' "$HEADERS_FILE"; then
+            echo "Production custom domain unexpectedly returned X-Robots-Tag: noindex." >&2
+            exit 1
+          fi
+
+          grep -Fq 'Private Text Compare' "$BODY_FILE"
+          grep -Fq 'Compare text without sending it anywhere.' "$BODY_FILE"
+          grep -Fq 'No uploads · No account · No tracking' "$BODY_FILE"
+
+          node --input-type=module - "$BODY_FILE" "$PRODUCTION_URL" <<'NODE'
+          import fs from 'node:fs';
+          const [file, expectedUrl] = process.argv.slice(2);
+          const html = fs.readFileSync(file, 'utf8');
+
+          const canonical = html.match(/<link\b[^>]*\brel="canonical"[^>]*\bhref="([^"]+)"[^>]*>/i)?.[1];
+          if (canonical !== expectedUrl) {
+            console.error(`Unexpected production canonical: ${canonical ?? '<missing>'}`);
+            process.exit(1);
+          }
+
+          if (canonical.includes('localhost') || canonical.includes('pages.dev')) {
+            console.error('Production canonical points to a non-production origin.');
+            process.exit(1);
+          }
+
+          const jsonLdBlocks = [...html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+          if (jsonLdBlocks.length !== 1) {
+            console.error(`Expected exactly one JSON-LD block, found ${jsonLdBlocks.length}.`);
+            process.exit(1);
+          }
+
+          const structuredData = JSON.parse(jsonLdBlocks[0][1]);
+          if (structuredData['@type'] !== 'WebSite' || structuredData.url !== expectedUrl) {
+            console.error('Production WebSite JSON-LD URL is not the approved production URL.');
+            process.exit(1);
+          }
+
+          const robotsMeta = [...html.matchAll(/<meta\b[^>]*name="robots"[^>]*content="([^"]*)"[^>]*>/gi)];
+          if (robotsMeta.some((match) => match[1].toLowerCase().includes('noindex'))) {
+            console.error('Production HTML unexpectedly contains meta robots noindex.');
+            process.exit(1);
+          }
+          NODE
+
+          ROBOTS_STATUS="$(curl --silent --show-error --location --output "$ROBOTS_FILE" --write-out '%{http_code}' "${PRODUCTION_URL}robots.txt")"
+          if [[ "$ROBOTS_STATUS" != "200" ]]; then
+            echo "Production robots.txt did not return HTTP 200." >&2
+            exit 1
+          fi
+
+          EXPECTED_ROBOTS="$(printf 'User-agent: *\nAllow: /\nSitemap: %s' "$EXPECTED_SITEMAP")"
+          if [[ "$(sed -e '${/^$/d;}' "$ROBOTS_FILE")" != "$EXPECTED_ROBOTS" ]]; then
+            echo "Production robots.txt does not contain the exact approved sitemap directive." >&2
+            exit 1
+          fi
+
+          SITEMAP_STATUS="$(curl --silent --show-error --location --output "$SITEMAP_FILE" --write-out '%{http_code}' "$EXPECTED_SITEMAP")"
+          if [[ "$SITEMAP_STATUS" != "200" ]]; then
+            echo "Production sitemap.xml did not return HTTP 200." >&2
+            exit 1
+          fi
+
+          node --input-type=module - "$SITEMAP_FILE" "$PRODUCTION_URL" <<'NODE'
+          import fs from 'node:fs';
+          const [file, expectedUrl] = process.argv.slice(2);
+          const xml = fs.readFileSync(file, 'utf8');
+          const locations = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+          if (locations.length !== 1 || locations[0] !== expectedUrl) {
+            console.error(`Unexpected production sitemap locations: ${JSON.stringify(locations)}`);
+            process.exit(1);
+          }
+          NODE
+
+          echo "Production HTTPS, canonical, structured data, crawling assets, and indexability gates passed."

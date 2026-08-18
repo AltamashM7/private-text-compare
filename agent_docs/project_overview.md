@@ -4,22 +4,24 @@ Private Text Compare is a privacy-first, client-side text comparison and diff ch
 
 ## Product intent
 
-The accepted MVP foundation is an immediate-use comparison tool with a small, focused interface. Compared text is processed client-side and is not persisted by default. The project remains static-first so it can stay simple, fast, indexable, and inexpensive to operate.
+The accepted MVP is an immediate-use comparison tool with a focused interface. Compared text is processed client-side and is not persisted by default. The project remains static-first so it can stay simple, fast, indexable, and inexpensive to operate.
 
-Potential users include writers, editors, developers, students, reviewers, and anyone checking revisions or copied text. Launch, discoverability, and future growth work may build on the accepted product foundation, while privacy remains a core constraint. Advertising, analytics SDKs, tracking pixels, and behavioral tracking are not part of the current product.
+Potential users include writers, editors, developers, students, reviewers, and anyone checking revisions or copied text. Privacy remains a core constraint. Advertising, analytics SDKs, tracking pixels, and behavioral tracking are not part of the current product.
 
 ## Current state
 
-The accepted product foundation includes:
+Accepted through Phase 1D:
 
-- a working responsive Original/Changed comparator with line- and inline-level diff presentation;
+- responsive Original/Changed comparison with line- and inline-level diff presentation;
 - ignore-case and ignore-surrounding-whitespace options, Swap, Clear, and stale-result safety;
-- a framework-independent comparison engine under `src/core/compare/`;
-- framework-independent unified-diff and plain-text report serializers under `src/core/export/`;
+- framework-independent comparison and export logic under `src/core/`;
 - local Copy diff, `.diff` download, and plain-text report download actions;
 - client-side-only handling of compared text, results, option snapshots, and generated export content;
-- a responsive dark-default Dark/Light interface with self-hosted Geist typography;
+- responsive dark-default Dark/Light presentation with self-hosted Geist typography;
+- static launch guidance plus deterministic canonical, social, WebSite JSON-LD, favicon, robots, and sitemap metadata;
 - permanent GitHub Actions verification with Vitest and Playwright Browser QA;
 - gated Cloudflare Pages Direct Upload previews for same-repository pull requests.
 
-Production deployment, the planned custom domain, analytics/ads, backend/accounts, compared-text persistence/history, URL sharing, and file-import features remain separately gated future work.
+Phase 1E is the current release phase. Its approved production hostname is `https://textcompare.amosfot.in/`; the earlier `https://compare.amosfot.in/` plan was never activated and is superseded. Phase 1E-A prepares a manually gated exact-current-main Cloudflare Pages Direct Upload release path and Pages custom-domain verification path, but does not itself deploy production, activate a domain, or change DNS.
+
+Phase 1E is not complete until a later accepted main SHA is deliberately released through the manual gate and the live production domain passes provenance, HTTPS, canonical, crawling, and indexability verification.

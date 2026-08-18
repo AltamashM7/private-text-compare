@@ -1,102 +1,54 @@
 # Latest session work
 
-## Phase 1D Launch / SEO Readiness handoff
+## Phase 1E-A production-release preparation handoff
 
-### Starting state
+### Accepted starting state
 
-- Authoritative Phase 1D starting `main`: `f60069455d85cb8d8be9eb1c85896fff7d249f25`.
-- Post-closeout main workflow run `32053292530` completed successfully on that exact commit.
-- Implementation branch: `phase-1d/launch-seo-readiness`.
-- Draft PR: #10, targeting `main`.
-- Phase 1D remains unaccepted and unmerged until Orchestrator review and separate user approval.
+- Phase 1D Launch / SEO Readiness is accepted and squash-merged.
+- Accepted Phase 1D `main`: `143fa60471f44b4b7c200b933580c3737896ceb3`.
+- The squash commit tree matched the reviewed final PR #10 tree exactly.
+- Acceptance followed final-head source/diff review, Verify success, Browser QA success, Cloudflare preview success with exact provenance, responsive screenshot review, Android manual QA, and explicit user merge approval.
+- Final reviewed PR #10 head `f500a8da340df2ade313e2c338fbb2b893a07fd2` passed workflow run `32058578434`: Verify job `95474316934`, Browser QA job `95474444110`, and preview job `95474822433` all succeeded; 58/58 unit tests and 41/41 browser tests passed.
+- Final-head screenshot artifact `9297308830` contained 14 files. Final-head preview deployment `0a970779-41cc-4449-ae00-bf01f232d076` at `https://0a970779.private-text-compare.pages.dev` proved the full PR-head SHA on `pr-10` and passed HTTP 200/noindex verification.
+- The historical post-merge Phase 1D push-run ID is not independently retrievable through the available Builder/Orchestrator connector interface, so no such run ID is invented or presented as verified.
 
-### Static launch architecture
+### Current Phase 1E-A work
 
-The accepted comparator/export path is unchanged. Phase 1D adds a separate static presentation/metadata layer:
+- Branch: `phase-1e/production-release`.
+- Draft PR: #11 targeting `main`.
+- Starting baseline remains `143fa60471f44b4b7c200b933580c3737896ceb3`.
+- Production hostname is now `https://textcompare.amosfot.in/`.
+- `https://compare.amosfot.in/` was planned only, never activated, and is superseded; no redirect or migration is required.
 
-```text
-existing comparator islands
-    ├─ ThemeToggle
-    └─ TextCompareTool
+Phase 1E-A changes only launch-origin configuration/tests, the existing GitHub Actions workflow, and durable documentation. Comparison/export behavior, UI/theme/fonts, privacy/storage semantics, dependencies, and lockfile are unchanged.
 
-static Astro launch layer
-    ├─ explanatory content below comparator
-    ├─ canonical/social metadata + WebSite JSON-LD
-    ├─ favicon.svg
-    ├─ robots.txt
-    └─ sitemap.xml
-```
+### Canonical/SEO update
 
-- Astro `site` is configured as `https://compare.amosfot.in` for build-time canonical generation only.
-- `BaseLayout.astro` emits static canonical, Open Graph, Twitter summary metadata, favicon linkage, and one deterministic `WebSite` JSON-LD object.
-- No FAQPage, review/rating, offers, SearchAction, fake organization/person, Open Graph image, meta keywords, or Search Console verification metadata is added.
-- Product HTML contains no meta noindex. Existing Cloudflare PR previews remain protected by deployment-layer `X-Robots-Tag: noindex`.
+- Astro `site` is `https://textcompare.amosfot.in`.
+- `BaseLayout.astro` derives both canonical and WebSite JSON-LD site root from `Astro.site`, reducing duplicate hostname state.
+- `robots.txt` points to `https://textcompare.amosfot.in/sitemap.xml`.
+- `sitemap.xml` contains only `https://textcompare.amosfot.in/`.
+- Browser SEO tests require canonical, `og:url`, WebSite JSON-LD, robots, and sitemap values for the new host; localhost/Pages preview origins remain rejected.
+- The obsolete host check uses the full origin `https://compare.amosfot.in` / URL-origin comparison rather than the unsafe bare hostname substring contained inside `textcompare.amosfot.in`.
+- Phase 1D metadata/schema restrictions remain unchanged.
 
-### Static page content
+### Manual release architecture
 
-All new launch content is after `TextCompareTool` and requires no JavaScript:
+The existing `.github/workflows/ci.yml` now declares required `workflow_dispatch.inputs.target_sha`. Verify project and Browser QA still run for pull requests, main pushes, and manual dispatches. The existing preview job remains same-repository PR-only.
 
-- How it works: paste both versions, choose ignore options, compare/review/export.
-- Private by design: compared text stays local to the browser session, is not uploaded to a Private Text Compare backend, transient comparison/export state clears on refresh, only theme may persist, clipboard is write-only/user-initiated, and downloads are local.
-- Useful for quick before-and-after checks: restrained writing, study, code/configuration, AI rewrite, email/policy/business-text examples.
-- Frequently asked questions: upload/storage, accounts, ignore-case, leading/trailing whitespace semantics, Copy/.diff/.txt export without retained history, and current lack of direct file import.
+The manual dispatch guard requires `refs/heads/main`, a full 40-character SHA, exact equality with `github.sha`, and a fresh `origin/main` fetch proving the input is still current main. The production job repeats that exact-current-main check after checking out the dispatched SHA.
 
-The existing Vercel-like precision/editor visual identity, dark-default dual themes, Geist fonts, technical canvas, and comparator placement remain intact. Launch presentation uses dividers, whitespace, restrained responsive grids, and mobile stacking rather than promotional cards or animation.
+`Deploy Cloudflare production` has `needs: browser-qa` and runs only when `github.event_name == 'workflow_dispatch'`. It reuses the existing pinned actions, Wrangler `4.123.0`, existing Cloudflare secrets, and Pages project `private-text-compare`. The prepared Direct Upload command associates `dist` with branch `main` and exact `target_sha`.
 
-### Static launch assets
+After deployment, raw Cloudflare deployment API metadata must prove the full 40-character target SHA, production environment, main branch, and exact deployment URL. Only then may the workflow inspect Pages custom domains. An unexpected `compare.amosfot.in` association fails without mutation; `textcompare.amosfot.in` is added only if absent, then polled for a bounded period until ACTIVE. There are no DNS mutation calls and no permission broadening.
 
-- `public/favicon.svg`: original 64×64-viewBox geometric diff/comparison mark; no external asset/font/raster reference.
-- `public/robots.txt`: allows `/` and points to `https://compare.amosfot.in/sitemap.xml`.
-- `public/sitemap.xml`: standard urlset containing only `https://compare.amosfot.in/`; no artificial lastmod and no preview URL.
-
-### Verification coverage
-
-`tests/browser/seo.spec.ts` exercises the built/static site and adds coverage for:
-
-- exact homepage title and description;
-- exact canonical, Open Graph, and Twitter summary values;
-- parsed `WebSite` JSON-LD site name/URL and omission of fake rating/review/SearchAction data;
-- favicon linkage plus successful local SVG response;
-- robots and sitemap responses/content;
-- no localhost/pages.dev canonical or sitemap values;
-- one H1 and required static launch sections/FAQ;
-- launch content adds no new hydrated island; the two accepted islands remain the only hydrated interaction;
-- no HTML meta noindex;
-- initial runtime requests remain same-origin;
-- four focused launch screenshots: Dark/Light 1440×900 and Dark/Light 390×844.
-
-The existing ten comparator screenshots and all earlier browser/unit suites remain untouched.
-
-### Verified implementation evidence
-
-- Verified Phase 1D implementation head: `2bf8387389d3869bf2ac77a78d40d3ab033da48c`.
-- Final implementation-head workflow run `32055826893` completed the full permanent Verify → Browser QA → Cloudflare preview chain successfully.
-- Verify project: success.
-- Browser QA: success, with 41/41 browser tests passing.
-- Unit tests: 58/58 passing.
-- Screenshot artifact: `9296383518`, containing 14 files.
-- Deploy Cloudflare preview: success.
-- Immutable preview: `https://a025e542.private-text-compare.pages.dev`.
-- PR alias: `https://pr-10.private-text-compare.pages.dev`.
-- Deployment ID: `a025e542-0df9-4d96-b54a-a38dacc11eb3`.
-- Raw Cloudflare provenance verified the full implementation head `2bf8387389d3869bf2ac77a78d40d3ab033da48c` on preview branch `pr-10`.
-- Live preview verification passed with HTTP 200 and `X-Robots-Tag: noindex`.
-- No production deployment occurred and `compare.amosfot.in` custom-domain/DNS activation remains inactive.
-
-### Scope and privacy boundary
-
-- No `src/core/compare/**` or `src/core/export/**` changes.
-- No `TextCompareTool` comparison/export logic change.
-- No npm dependency or lockfile change.
-- No CI workflow or Cloudflare configuration change.
-- No analytics, tracking, telemetry, backend, accounts, authentication, persistence/history, URL sharing, file import, new export format, PWA/service worker, third-party font/script/CDN, or new external runtime request.
-- No production deployment and no `compare.amosfot.in` DNS/custom-domain activation.
+Once ACTIVE, live gates require production HTTP 200, product markers, exact canonical and WebSite JSON-LD URL, exact robots/sitemap responses, no localhost/Pages canonical, no HTML noindex, and no `X-Robots-Tag: noindex`. PR previews continue to require `X-Robots-Tag: noindex`.
 
 ### Acceptance boundary
 
-- Phase 1D is implemented on Draft PR #10 but is not accepted overall.
-- GitHub remains authoritative for the exact final PR head.
-- Any documentation-only correction after the verified implementation head must itself pass the normal final-head Verify → Browser QA → Cloudflare preview chain before merge.
-- Orchestrator independently reviews the documentation-only correction and may request Android/manual QA if needed.
-- Phase 1D remains unaccepted/unmerged until Orchestrator review and explicit user approval.
-- Do not merge or mark PR #10 ready without separate explicit authorization.
+- Phase 1E-A PR #11 is review-only and must remain Draft/unmerged until separate authorization.
+- This PR must run only the normal Verify → Browser QA → Cloudflare PR preview chain; its production job must be skipped.
+- No `workflow_dispatch` is to be run during Phase 1E-A PR verification.
+- No production deployment, Pages custom-domain association, domain activation, or DNS change occurs in this PR.
+- Fresh final-head PR #11 CI is the authoritative verification of the accepted Phase 1D tree plus these bounded Phase 1E-A changes.
+- Phase 1E is not complete after Phase 1E-A merge; completion requires a later exact-current-main manual production release and successful live-domain/provenance/indexability verification.

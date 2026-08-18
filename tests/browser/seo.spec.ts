@@ -2,8 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 const pageTitle = 'Private Text Compare — Compare Text Online Privately';
 const pageDescription = 'Compare two versions of text with line-by-line and word-level highlights directly in your browser. No uploads, accounts, or tracking.';
-const canonicalUrl = 'https://compare.amosfot.in/';
-const sitemapUrl = 'https://compare.amosfot.in/sitemap.xml';
+const canonicalUrl = 'https://textcompare.amosfot.in/';
+const sitemapUrl = 'https://textcompare.amosfot.in/sitemap.xml';
+const obsoleteOrigin = 'https://compare.amosfot.in';
 
 async function openPage(page: Page) {
   const response = await page.goto('/', { waitUntil: 'networkidle' });
@@ -42,6 +43,7 @@ test('homepage exposes deterministic canonical and social metadata', async ({ pa
     nodes.map((node) => node.getAttribute(node.tagName === 'LINK' ? 'href' : 'content') ?? ''),
   );
   expect(canonicalValues.every((value) => !value.includes('localhost') && !value.includes('pages.dev'))).toBe(true);
+  expect(canonicalValues.every((value) => new URL(value).origin !== obsoleteOrigin)).toBe(true);
 });
 
 test('site identity, semantic launch content, and hydration boundary are present', async ({ page }) => {
@@ -57,6 +59,7 @@ test('site identity, semantic launch content, and hydration boundary are present
     url: canonicalUrl,
     description: pageDescription,
   });
+  expect(new URL(structuredData.url).origin).not.toBe(obsoleteOrigin);
   expect(structuredData).not.toHaveProperty('aggregateRating');
   expect(structuredData).not.toHaveProperty('review');
   expect(structuredData).not.toHaveProperty('potentialAction');
@@ -93,11 +96,16 @@ test('favicon is linked and served as standalone SVG', async ({ page, request })
 test('robots.txt allows crawling and points only to the production sitemap', async ({ request }) => {
   const response = await request.get('/robots.txt');
   expect(response.ok()).toBe(true);
-  expect((await response.text()).trim()).toBe([
+  const robots = (await response.text()).trim();
+  expect(robots).toBe([
     'User-agent: *',
     'Allow: /',
     `Sitemap: ${sitemapUrl}`,
   ].join('\n'));
+
+  const sitemapDirective = robots.split('\n').find((line) => line.startsWith('Sitemap: '));
+  expect(sitemapDirective).toBeDefined();
+  expect(new URL(sitemapDirective!.slice('Sitemap: '.length)).origin).not.toBe(obsoleteOrigin);
 });
 
 test('sitemap contains exactly the canonical homepage without preview metadata', async ({ request }) => {
@@ -107,6 +115,7 @@ test('sitemap contains exactly the canonical homepage without preview metadata',
   const locations = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 
   expect(locations).toEqual([canonicalUrl]);
+  expect(locations.every((location) => new URL(location).origin !== obsoleteOrigin)).toBe(true);
   expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
   expect(xml).not.toContain('<lastmod>');
   expect(xml).not.toContain('localhost');
