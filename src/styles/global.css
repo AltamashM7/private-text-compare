@@ -858,3 +858,8 @@ html[data-theme="light"] .theme-toggle-icon--sun {
     min-height: 148px;
   }
 }
+
+.portfolio-nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;margin-top:10px}
+.portfolio-nav-label{color:var(--text-faint)}
+.portfolio-nav a{color:var(--text-muted);text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:3px}
+.portfolio-nav a:hover{color:var(--text)}

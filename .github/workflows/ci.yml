@@ -116,6 +116,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Check dependency audit
+        run: npm audit
+
       - name: Check Astro and TypeScript
         run: npm run check
 
@@ -124,6 +127,9 @@ jobs:
 
       - name: Build static production output
         run: npm run build
+
+      - name: Verify SEO contract
+        run: npm run verify:seo
 
   browser-qa:
     name: Browser QA

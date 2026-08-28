@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const pageTitle = 'Private Text Compare — Compare Text Online Privately';
-const pageDescription = 'Compare two versions of text with line-by-line and word-level highlights directly in your browser. No uploads, accounts, or tracking.';
+const pageTitle = 'Text Compare Online — Private Diff Checker | Private Text Compare';
+const pageDescription = 'Compare two texts online with line-by-line and word-level highlights. Runs locally in your browser—no uploads, account, or tracking.';
 const canonicalUrl = 'https://textcompare.amosfot.in/';
 const sitemapUrl = 'https://textcompare.amosfot.in/sitemap.xml';
 const obsoleteOrigin = 'https://compare.amosfot.in';
@@ -32,12 +32,18 @@ test('homepage exposes deterministic canonical and social metadata', async ({ pa
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', canonicalUrl);
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'Private Text Compare');
 
-  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary');
   await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', pageTitle);
   await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', pageDescription);
 
   await expect(page.locator('meta[name="keywords"]')).toHaveCount(0);
-  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow, max-image-preview:large');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://textcompare.amosfot.in/og/homepage.png');
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+  await expect(page.locator('meta[property="og:image:alt"]')).not.toHaveAttribute('content', '');
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', 'https://textcompare.amosfot.in/og/homepage.png');
+  await expect(page.locator('meta[name="twitter:image:alt"]')).not.toHaveAttribute('content', '');
 
   const canonicalValues = await page.locator('link[rel="canonical"], meta[property="og:url"]').evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute(node.tagName === 'LINK' ? 'href' : 'content') ?? ''),
@@ -52,19 +58,22 @@ test('site identity, semantic launch content, and hydration boundary are present
   const jsonLd = page.locator('script[type="application/ld+json"]');
   await expect(jsonLd).toHaveCount(1);
   const structuredData = JSON.parse((await jsonLd.textContent()) ?? '{}');
-  expect(structuredData).toMatchObject({
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'Private Text Compare',
-    url: canonicalUrl,
-    description: pageDescription,
-  });
-  expect(new URL(structuredData.url).origin).not.toBe(obsoleteOrigin);
-  expect(structuredData).not.toHaveProperty('aggregateRating');
-  expect(structuredData).not.toHaveProperty('review');
-  expect(structuredData).not.toHaveProperty('potentialAction');
+  expect(structuredData['@context']).toBe('https://schema.org');
+  const graph = structuredData['@graph'];
+  expect(Array.isArray(graph)).toBe(true);
+  const website = graph.find((node: { '@type'?: string }) => node['@type'] === 'WebSite');
+  const app = graph.find((node: { '@type'?: string }) => node['@type'] === 'WebApplication');
+  expect(website).toMatchObject({ '@id': canonicalUrl + '#website', url: canonicalUrl, name: 'Private Text Compare', description: pageDescription, inLanguage: 'en' });
+  expect(app).toMatchObject({ '@id': canonicalUrl + '#app', url: canonicalUrl, name: 'Private Text Compare', description: pageDescription, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', isAccessibleForFree: true, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } });
+  expect(JSON.stringify(structuredData)).not.toContain('aggregateRating');
+  expect(JSON.stringify(structuredData)).not.toContain('"review"');
 
   await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 1, name: 'Compare Text Online Privately' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 3, name: 'What is a text diff checker?' })).toBeVisible();
+  const portfolio = page.getByRole('navigation', { name: 'More Amosfot browser tools' });
+  await expect(portfolio.getByRole('link', { name: 'Upload Ready' })).toHaveAttribute('href', 'https://upload-ready.amosfot.in/');
+  await expect(portfolio.getByRole('link', { name: 'PDF Ready' })).toHaveAttribute('href', 'https://pdf-ready.amosfot.in/');
   await expect(page.getByRole('heading', { level: 2, name: 'How it works' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Private by design' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Useful for quick before-and-after checks' })).toBeVisible();
