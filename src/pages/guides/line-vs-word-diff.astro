@@ -1,0 +1,67 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+const title = "Line Diff vs Word Diff: What's the Difference? | Private Text Compare";
+const description = 'Understand line-level and word-level text differences, when each is useful, and how changed lines can contain more precise inline word highlights.';
+---
+<GuideLayout title={title} description={description} canonicalPath="/guides/line-vs-word-diff/" imagePath="/og/guides/line-vs-word-diff.png" imageAlt="A synthetic changed sentence shown first as line-level context and then with specific changed words highlighted." breadcrumbLabel="Line diff vs word diff">
+  <article class="guide-article">
+    <header class="guide-hero">
+      <p class="section-kicker">Diff granularity guide</p>
+      <h1>Line diff vs word diff: when each comparison helps</h1>
+      <p class="guide-lead">Line-level comparison answers “which rows changed?” Word-level detail answers “which words inside this changed row changed?” Private Text Compare combines those ideas in one presentation rather than exposing separate Line mode and Word mode switches.</p>
+    </header>
+    <aside class="guide-quick-answer" data-testid="quick-answer">
+      <strong>Quick answer</strong>
+      <p>Private Text Compare aligns rows at line level. It labels whole rows as unchanged, changed, added or removed, and a <strong>changed</strong> row can then contain inline word-level removed and added highlights.</p>
+      <a href="/">Open Private Text Compare</a>
+    </aside>
+
+    <section class="guide-section" aria-labelledby="definitions">
+      <h2 id="definitions">Line-level context vs word-level detail</h2>
+      <div class="guide-definition-grid" role="list">
+        <article role="listitem"><span class="guide-demo-label">Line-level context</span><strong>Which line or row changed?</strong><p>Useful for understanding structure, alignment, additions and removals across the two versions.</p></article>
+        <article role="listitem"><span class="guide-demo-label">Word-level detail</span><strong>What changed inside this modified line?</strong><p>Useful when a sentence is mostly the same but one or two words were edited.</p></article>
+      </div>
+      <p>There is no user-facing “Line mode / Word mode” selector. The word detail appears inside rows that the line-level comparison identifies as changed.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>A sentence can be changed while most words stay the same</h2>
+      <div class="guide-wide guide-example">
+        <div class="guide-demo-result"><span class="guide-demo-label">Line-level status · CHANGED</span><p>Original: The project review starts on Tuesday at 10 AM.</p><p>Changed: The project review starts on Wednesday at 11 AM.</p></div>
+        <div class="guide-demo-result guide-demo-result--detail"><span class="guide-demo-label">Inline word detail inside that changed row</span><p>The project review starts on <del>Tuesday</del> <ins>Wednesday</ins> at <del>10</del> <ins>11</ins> AM.</p></div>
+      </div>
+      <p>The whole row is “changed” because the two aligned lines are not identical. The inline highlights show that most of the sentence stayed unchanged while two values were replaced.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>When line structure matters most</h2>
+      <ul>
+        <li><strong>Code snippets:</strong> see which source lines were added, removed or modified. The tool is not source-code-aware and does not parse a programming language.</li>
+        <li><strong>Configuration:</strong> spot a changed setting line or inserted entry without implying semantic understanding of the config format.</li>
+        <li><strong>Lists:</strong> identify inserted, removed or edited list rows.</li>
+        <li><strong>Logs:</strong> compare line-oriented outputs when the text is small enough to paste and review.</li>
+        <li><strong>Paragraph boundaries:</strong> a line break can affect alignment, so structure can be part of the difference.</li>
+      </ul>
+    </section>
+
+    <section class="guide-section">
+      <h2>When inline word detail is most useful</h2>
+      <p>For prose, the important question is often not just that a sentence changed, but how. Inline word highlights help with writing revisions, email edits, policy wording, reports and other text where a small replacement can change the meaning of a sentence.</p>
+      <p>Because word detail is nested inside a changed row, you keep the surrounding line context instead of seeing isolated tokens with no indication of where they came from.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>Changed lines are different from whole added or removed lines</h2>
+      <p>A <strong>changed</strong> row represents aligned content that differs and can therefore show inline removed and added words. A whole <strong>added</strong> line exists only in the right-hand Changed version. A whole <strong>removed</strong> line existed in the left-hand Original version but not the revised one.</p>
+      <p>That distinction is why the direction of comparison still matters even when you care mainly about word detail.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>Case and surrounding whitespace can change what counts as different</h2>
+      <p><strong>Ignore case</strong> can make case-only edits compare as unchanged. <strong>Ignore surrounding whitespace</strong> ignores leading and trailing whitespace on each line, not arbitrary whitespace inside the line. Use the options only when those differences are irrelevant to the task you are reviewing.</p>
+    </section>
+
+    <nav class="guide-next" aria-label="Guide navigation"><a href="/">Compare text online privately</a><a href="/guides/compare-two-texts/">Related: How to compare two texts</a></nav>
+  </article>
+</GuideLayout>

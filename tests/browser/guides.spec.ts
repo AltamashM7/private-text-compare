@@ -1,0 +1,13 @@
+import { expect, test, type Page } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+const shots='artifacts/screenshots';
+const guides=[
+{slug:'compare-two-texts',path:'/guides/compare-two-texts/',title:'How to Compare Two Texts Online | Private Text Compare',h1:'How to compare two texts and see what changed',canonical:'https://textcompare.amosfot.in/guides/compare-two-texts/',quick:'Put the earlier or original version on the left',tool:'Compare two texts with Private Text Compare',sibling:'Next: Line diff vs word diff'},
+{slug:'line-vs-word-diff',path:'/guides/line-vs-word-diff/',title:"Line Diff vs Word Diff: What's the Difference? | Private Text Compare",h1:'Line diff vs word diff: when each comparison helps',canonical:'https://textcompare.amosfot.in/guides/line-vs-word-diff/',quick:'aligns rows at line level',tool:'Open Private Text Compare',sibling:'Related: How to compare two texts'}
+] as const;
+async function noOverflow(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true)}
+test.beforeAll(async()=>{await mkdir(shots,{recursive:true})});
+for(const g of guides){
+test(g.slug+' guide metadata, content, links and desktop rendering',async({page})=>{await page.setViewportSize({width:1440,height:900});const r=await page.goto(g.path,{waitUntil:'networkidle'});expect(r?.ok()).toBe(true);await expect(page).toHaveTitle(g.title);await expect(page.locator('h1')).toHaveCount(1);await expect(page.getByRole('heading',{level:1,name:g.h1})).toBeVisible();await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',g.canonical);await expect(page.getByTestId('quick-answer')).toContainText(g.quick);await expect(page.getByRole('link',{name:g.tool})).toHaveAttribute('href','/');await expect(page.getByRole('link',{name:g.sibling})).toBeVisible();await expect(page.getByRole('navigation',{name:'Breadcrumb'})).toBeVisible();await noOverflow(page);await page.screenshot({path:shots+'/seo-b-'+g.slug+'-desktop-dark.png',fullPage:true})});
+test(g.slug+' guide mobile rendering has no overflow',async({page})=>{await page.setViewportSize({width:390,height:844});const r=await page.goto(g.path,{waitUntil:'networkidle'});expect(r?.ok()).toBe(true);await expect(page.getByTestId('quick-answer')).toBeVisible();await noOverflow(page);await page.screenshot({path:shots+'/seo-b-'+g.slug+'-mobile-dark.png',fullPage:true})});
+}

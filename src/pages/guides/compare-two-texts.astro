@@ -1,0 +1,74 @@
+---
+import GuideLayout from '../../layouts/GuideLayout.astro';
+const title = 'How to Compare Two Texts Online | Private Text Compare';
+const description = 'Learn how to compare an original and revised text, interpret added, removed and changed lines, and review word-level edits privately in your browser.';
+---
+<GuideLayout title={title} description={description} canonicalPath="/guides/compare-two-texts/" imagePath="/og/guides/compare-two-texts.png" imageAlt="Synthetic original and changed text panels leading to a highlighted line and word diff." breadcrumbLabel="How to compare two texts">
+  <article class="guide-article">
+    <header class="guide-hero">
+      <p class="section-kicker">Text comparison guide</p>
+      <h1>How to compare two texts and see what changed</h1>
+      <p class="guide-lead">A useful comparison starts by deciding which version is the baseline. Put the earlier text on the left, the revised text on the right, then read the result as a description of how the right-hand version differs from the left.</p>
+    </header>
+    <aside class="guide-quick-answer" data-testid="quick-answer">
+      <strong>Quick answer</strong>
+      <p>Put the earlier or original version on the left and the revised version on the right, then compare. The result identifies unchanged, changed, added and removed rows; a changed row can also highlight the specific words that differ.</p>
+      <a href="/">Compare two texts with Private Text Compare</a>
+    </aside>
+
+    <section class="guide-section" aria-labelledby="worked-example">
+      <h2 id="worked-example">A worked two-text comparison</h2>
+      <p>Here is a small synthetic example. The wording is intentionally ordinary so the mechanics are easy to see.</p>
+      <div class="guide-wide guide-example" aria-label="Worked original and changed text example">
+        <div class="guide-compare-grid">
+          <div class="guide-demo-panel"><span class="guide-demo-label">Original · left</span><p>The project meeting starts on Tuesday at 10 AM.<br />Please bring the draft report.</p></div>
+          <div class="guide-demo-panel"><span class="guide-demo-label">Changed · right</span><p>The project review starts on Wednesday at 11 AM.<br />Please bring the final report.</p></div>
+        </div>
+        <div class="guide-demo-result">
+          <span class="guide-demo-label">Changed row detail</span>
+          <p>The project <del>meeting</del> <ins>review</ins> starts on <del>Tuesday</del> <ins>Wednesday</ins> at <del>10</del> <ins>11</ins> AM.</p>
+          <p>Please bring the <del>draft</del> <ins>final</ins> report.</p>
+        </div>
+      </div>
+      <p>The surrounding sentence still matters because it tells you where the edits occurred. The inline highlights then narrow a changed line down to the words removed from the original and added in the revised version.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>Why left-to-right direction matters</h2>
+      <p>A diff is directional. Private Text Compare treats the left editor as <strong>Original</strong> and the right editor as <strong>Changed</strong>. If the newer version contains a line that did not exist in the original, that line is added relative to the left side. If a line existed on the left but is absent on the right, it is removed.</p>
+      <p>If you swap the two versions, the text is the same but the interpretation reverses: an addition can become a removal because you changed the baseline. For review work, keep the earlier version on the left unless you intentionally want the opposite perspective.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>How to read unchanged, changed, added and removed rows</h2>
+      <div class="guide-card-grid">
+        <article><strong>Unchanged</strong><p>The aligned line is the same after the active comparison options are applied.</p></article>
+        <article><strong>Changed</strong><p>The row represents modified content. Specific removed and added words can be highlighted inside it.</p></article>
+        <article><strong>Added</strong><p>The right-hand version contains a whole line that has no aligned counterpart in the original.</p></article>
+        <article><strong>Removed</strong><p>A line from the original no longer appears in the revised version at that aligned position.</p></article>
+      </div>
+    </section>
+
+    <section class="guide-section">
+      <h2>Use the comparison options deliberately</h2>
+      <h3>Ignore case</h3>
+      <p>When <strong>Ignore case</strong> is enabled, a case-only difference such as <code>Hello</code> versus <code>hello</code> is treated as unchanged for comparison. Leave it off when capitalization itself is meaningful.</p>
+      <h3>Ignore surrounding whitespace</h3>
+      <p>This option ignores <strong>leading and trailing whitespace on each line</strong>. It does not mean that every space inside a line is ignored. Internal whitespace can still be meaningful.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>Export only after the comparison says what you expect</h2>
+      <p>After comparing, you can use <strong>Copy diff</strong>, download a local <code>.diff</code> file, or download a local <code>.txt</code> report. These exports reflect the generated comparison; they are not a stored history service.</p>
+      <p>If you edit either side after producing a result, compare again before relying on the export so the visible result and exported representation correspond to the current text.</p>
+    </section>
+
+    <section class="guide-section">
+      <h2>What stays private in this workflow</h2>
+      <p>The actual Original and Changed text is processed in the browser page session. Private Text Compare does not upload that compared text to its own backend. The comparison content and result are transient for the current page session and clear on refresh; the existing theme preference is the small local preference that may persist.</p>
+      <p>This is a product-behavior boundary, not a claim about encryption, anonymity, or every part of the device or browser environment.</p>
+    </section>
+
+    <nav class="guide-next" aria-label="Guide navigation"><a href="/">Open the text comparison tool</a><a href="/guides/line-vs-word-diff/">Next: Line diff vs word diff</a></nav>
+  </article>
+</GuideLayout>
