@@ -53,9 +53,9 @@ async function currentTheme(page: Page) {
 
 test('initial comparator state is usable and accessible', async ({ page }) => {
   const errors = await openTool(page);
-  await expect(page).toHaveTitle('Private Text Compare — Compare Text Online Privately');
-  await expect(page.getByRole('heading', { level: 1, name: 'Private Text Compare' })).toBeVisible();
-  await expect(page.getByText('Compare text without sending it anywhere. See every line and word that changed.')).toBeVisible();
+  await expect(page).toHaveTitle('Text Compare Online — Private Diff Checker | Private Text Compare');
+  await expect(page.getByRole('heading', { level: 1, name: 'Compare Text Online Privately' })).toBeVisible();
+  await expect(page.getByText('Compare text without sending it anywhere.', { exact: false })).toBeVisible();
   await expect(page.getByText('Local only')).toBeVisible();
   await expect(originalInput(page)).toBeVisible();
   await expect(changedInput(page)).toBeVisible();
