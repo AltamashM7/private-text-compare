@@ -279,7 +279,7 @@ jobs:
             for attempt in 1 2 3 4 5 6; do
               : > "$headers"
               status="$(curl --silent --show-error --location --dump-header "$headers" --output "$body" --write-out '%{http_code}' "${PREVIEW_URL%/}${route}" || true)"
-              if [[ "$status" == "200" ]] && grep -Fq "$marker1" "$body" && { [[ -z "$marker2" ]] || grep -Fq "$marker2" "$body"; } && grep -Fq "rel=\"canonical\" href=\"${canonical}\"" "$body" && grep -Fq "property=\"og:url\" content=\"${canonical}\"" "$body" && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$headers"; then
+              if [[ "$status" == "200" ]] && grep -Fq "$marker1" "$body" && { [[ -z "$marker2" ]] || grep -Fq "$marker2" "$body"; } && grep -Fq 'href="https://tools.amosfot.in/"' "$body" && grep -Fq '>Amosfot Tools</a>' "$body" && grep -Fq "rel=\"canonical\" href=\"${canonical}\"" "$body" && grep -Fq "property=\"og:url\" content=\"${canonical}\"" "$body" && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$headers"; then
                 echo "Preview route verified: ${route} HTTP 200; canonical=${canonical}; X-Robots-Tag noindex."
                 return 0
               fi
@@ -627,6 +627,8 @@ jobs:
           grep -Fq 'Private Text Compare' "$BODY_FILE"
           grep -Fq 'Compare text without sending it anywhere.' "$BODY_FILE"
           grep -Fq 'No uploads · No account · No tracking' "$BODY_FILE"
+          grep -Fq 'href="https://tools.amosfot.in/"' "$BODY_FILE"
+          grep -Fq '>Amosfot Tools</a>' "$BODY_FILE"
 
           node --input-type=module - "$BODY_FILE" "$PRODUCTION_URL" <<'NODE'
           import fs from 'node:fs';
@@ -681,6 +683,8 @@ jobs:
             ! grep -Eiq '^x-robots-tag:[[:space:]]*.*noindex' "$headers"
             ! grep -Eiq '<meta[^>]+noindex' "$body"
             grep -Fq "$marker" "$body"
+            grep -Fq 'href="https://tools.amosfot.in/"' "$body"
+            grep -Fq '>Amosfot Tools</a>' "$body"
             grep -Fq "rel=\"canonical\" href=\"${canonical}\"" "$body"
             grep -Fq "property=\"og:url\" content=\"${canonical}\"" "$body"
           }
