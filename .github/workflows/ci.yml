@@ -613,9 +613,32 @@ jobs:
           ROBOTS_FILE="$(mktemp)"
           SITEMAP_FILE="$(mktemp)"
 
-          STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PRODUCTION_URL")"
-          if [[ "$STATUS" != "200" ]]; then
-            echo "Production homepage did not return HTTP 200 (received $STATUS)." >&2
+          STATUS=""
+          READY=false
+          for attempt in $(seq 1 12); do
+            : > "$HEADERS_FILE"
+            : > "$BODY_FILE"
+            STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PRODUCTION_URL" || true)"
+            if [[ "$STATUS" == "200" ]] \
+              && ! grep -Eiq '^x-robots-tag:[[:space:]]*.*noindex' "$HEADERS_FILE" \
+              && grep -Fq 'Private Text Compare' "$BODY_FILE" \
+              && grep -Fq 'Compare text without sending it anywhere.' "$BODY_FILE" \
+              && grep -Fq 'No uploads · No account · No tracking' "$BODY_FILE" \
+              && grep -Fq 'href="https://tools.amosfot.in/"' "$BODY_FILE" \
+              && grep -Fq '>Amosfot Tools</a>' "$BODY_FILE" \
+              && grep -Fq "rel=\"canonical\" href=\"${PRODUCTION_URL}\"" "$BODY_FILE"; then
+              READY=true
+              echo "Production branded homepage became ready on attempt $attempt/12."
+              break
+            fi
+            echo "Production branded homepage attempt $attempt/12 is not ready; HTTP=${STATUS:-request-failed}."
+            if [[ "$attempt" -lt 12 ]]; then
+              sleep 5
+            fi
+          done
+          if [[ "$READY" != "true" ]]; then
+            echo "Production branded homepage did not become ready after 12 attempts; HTTP=${STATUS:-request-failed}." >&2
+            sed -n '1,80p' "$HEADERS_FILE" >&2
             exit 1
           fi
 
