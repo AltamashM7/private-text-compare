@@ -272,33 +272,27 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$PREVIEW_URL"
-          HEADERS_FILE="$(mktemp)"
-          BODY_FILE="$(mktemp)"
-          STATUS=""
-
-          for attempt in 1 2 3 4 5 6; do
-            : > "$HEADERS_FILE"
-            STATUS="$(curl --silent --show-error --location --dump-header "$HEADERS_FILE" --output "$BODY_FILE" --write-out '%{http_code}' "$PREVIEW_URL" || true)"
-            if [[ "$STATUS" == "200" ]] \
-              && grep -Fq 'Private Text Compare' "$BODY_FILE" \
-              && grep -Fq 'Compare text without sending it anywhere.' "$BODY_FILE" \
-              && grep -Fq 'No uploads · No account · No tracking' "$BODY_FILE" \
-              && grep -Fq 'rel="canonical" href="https://textcompare.amosfot.in/"' "$BODY_FILE" \
-              && grep -Fq 'property="og:url" content="https://textcompare.amosfot.in/"' "$BODY_FILE" \
-              && grep -Fq '"url":"https://textcompare.amosfot.in/"' "$BODY_FILE" \
-              && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$HEADERS_FILE"; then
-              echo "Live preview verification succeeded with HTTP 200, production canonical metadata, and X-Robots-Tag: noindex."
-              exit 0
-            fi
-            echo "Preview verification attempt $attempt not healthy yet (HTTP ${STATUS:-request-failed})."
-            sleep 5
-          done
-
-          echo "Cloudflare preview failed bounded live verification." >&2
-          echo "Final HTTP status: ${STATUS:-request-failed}" >&2
-          echo "Response headers:" >&2
-          sed -n '1,80p' "$HEADERS_FILE" >&2
-          exit 1
+          verify_route() {
+            local route="$1"; local canonical="$2"; local marker1="$3"; local marker2="${4:-}"
+            local headers body status
+            headers="$(mktemp)"; body="$(mktemp)"; status=""
+            for attempt in 1 2 3 4 5 6; do
+              : > "$headers"
+              status="$(curl --silent --show-error --location --dump-header "$headers" --output "$body" --write-out '%{http_code}' "${PREVIEW_URL%/}${route}" || true)"
+              if [[ "$status" == "200" ]] && grep -Fq "$marker1" "$body" && { [[ -z "$marker2" ]] || grep -Fq "$marker2" "$body"; } && grep -Fq "rel=\"canonical\" href=\"${canonical}\"" "$body" && grep -Fq "property=\"og:url\" content=\"${canonical}\"" "$body" && grep -Eiq '^x-robots-tag:[[:space:]]*noindex([[:space:]]|$)' "$headers"; then
+                echo "Preview route verified: ${route} HTTP 200; canonical=${canonical}; X-Robots-Tag noindex."
+                return 0
+              fi
+              sleep 5
+            done
+            echo "Preview route failed: ${route}; HTTP=${status:-request-failed}" >&2
+            sed -n '1,80p' "$headers" >&2
+            return 1
+          }
+          verify_route "/" "https://textcompare.amosfot.in/" "Compare text without sending it anywhere." "No uploads · No account · No tracking"
+          verify_route "/guides/compare-two-texts/" "https://textcompare.amosfot.in/guides/compare-two-texts/" "How to compare two texts and see what changed"
+          verify_route "/guides/line-vs-word-diff/" "https://textcompare.amosfot.in/guides/line-vs-word-diff/" "Line diff vs word diff: when each comparison helps"
+          echo "Homepage and both guide preview routes passed live verification."
 
       - name: Inspect Cloudflare preview deployment metadata
         shell: bash
@@ -678,6 +672,21 @@ jobs:
           }
           NODE
 
+          verify_guide() {
+            local route="$1"; local canonical="$2"; local marker="$3"
+            local headers body status
+            headers="$(mktemp)"; body="$(mktemp)"
+            status="$(curl --silent --show-error --location --dump-header "$headers" --output "$body" --write-out '%{http_code}' "${PRODUCTION_URL%/}${route}")"
+            [[ "$status" == "200" ]]
+            ! grep -Eiq '^x-robots-tag:[[:space:]]*.*noindex' "$headers"
+            ! grep -Eiq '<meta[^>]+noindex' "$body"
+            grep -Fq "$marker" "$body"
+            grep -Fq "rel=\"canonical\" href=\"${canonical}\"" "$body"
+            grep -Fq "property=\"og:url\" content=\"${canonical}\"" "$body"
+          }
+          verify_guide "/guides/compare-two-texts/" "https://textcompare.amosfot.in/guides/compare-two-texts/" "How to compare two texts and see what changed"
+          verify_guide "/guides/line-vs-word-diff/" "https://textcompare.amosfot.in/guides/line-vs-word-diff/" "Line diff vs word diff: when each comparison helps"
+
           ROBOTS_STATUS="$(curl --silent --show-error --location --output "$ROBOTS_FILE" --write-out '%{http_code}' "${PRODUCTION_URL}robots.txt")"
           if [[ "$ROBOTS_STATUS" != "200" ]]; then
             echo "Production robots.txt did not return HTTP 200." >&2
@@ -698,11 +707,12 @@ jobs:
 
           node --input-type=module - "$SITEMAP_FILE" "$PRODUCTION_URL" <<'NODE'
           import fs from 'node:fs';
-          const [file, expectedUrl] = process.argv.slice(2);
+          const [file, root] = process.argv.slice(2);
           const xml = fs.readFileSync(file, 'utf8');
           const locations = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
-          if (locations.length !== 1 || locations[0] !== expectedUrl) {
-            console.error(`Unexpected production sitemap locations: ${JSON.stringify(locations)}`);
+          const expected = [root, root + 'guides/compare-two-texts/', root + 'guides/line-vs-word-diff/'];
+          if (JSON.stringify(locations) !== JSON.stringify(expected)) {
+            console.error('Unexpected production sitemap locations: ' + JSON.stringify(locations));
             process.exit(1);
           }
           NODE
