@@ -123,7 +123,7 @@ test('sitemap contains exactly the canonical homepage without preview metadata',
   const xml = await response.text();
   const locations = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
 
-  expect(locations).toEqual([canonicalUrl]);
+  expect(locations).toEqual([canonicalUrl, `${canonicalUrl}guides/compare-two-texts/`, `${canonicalUrl}guides/line-vs-word-diff/`]);
   expect(locations.every((location) => new URL(location).origin !== obsoleteOrigin)).toBe(true);
   expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
   expect(xml).not.toContain('<lastmod>');
