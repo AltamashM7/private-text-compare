@@ -657,8 +657,17 @@ jobs:
           }
 
           const structuredData = JSON.parse(jsonLdBlocks[0][1]);
-          if (structuredData['@type'] !== 'WebSite' || structuredData.url !== expectedUrl) {
+          const nodes = Array.isArray(structuredData['@graph']) ? structuredData['@graph'] : [structuredData];
+          const website = nodes.find((node) => node?.['@type'] === 'WebSite');
+          const application = nodes.find((node) => node?.['@type'] === 'WebApplication');
+
+          if (!website || website.url !== expectedUrl) {
             console.error('Production WebSite JSON-LD URL is not the approved production URL.');
+            process.exit(1);
+          }
+
+          if (!application || application.url !== expectedUrl) {
+            console.error('Production WebApplication JSON-LD URL is not the approved production URL.');
             process.exit(1);
           }
 
