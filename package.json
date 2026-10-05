@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@astrojs/preact": "6.0.2",
-    "astro": "7.2.0",
+    "astro": "7.3.5",
     "diff": "9.0.0",
     "preact": "10.29.7"
   },
@@ -24,7 +24,7 @@
     "@tailwindcss/vite": "4.3.3",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vitest": "4.1.10",
-    "wrangler": "4.123.0"
+    "vitest": "4.1.11",
+    "wrangler": "4.147.0"
   }
 }
