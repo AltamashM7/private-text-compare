@@ -19,3 +19,7 @@ Earlier Phase 1E launch notes and SEO batch files are historical records. They s
 ## Current boundary
 
 Private Text Compare is a complete live portfolio tool. No new feature work, monetization, analytics, or opportunity research is being performed in this documentation batch. Portfolio expansion is coordinated from AltamashM7/amosfot-tools.
+
+## Current dependency-security maintenance note
+
+A fresh October 2026 PR verification now fails at the repository's existing npm audit gate because newly published advisories affect the pinned dependency graph, including a critical Astro advisory and additional transitive/development advisories. The documentation changes did not introduce these vulnerabilities. Do not weaken or bypass the audit gate; resolve them in a separate bounded dependency-security maintenance batch before beginning tool #4 development.
