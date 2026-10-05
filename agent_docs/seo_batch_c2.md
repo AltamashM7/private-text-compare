@@ -1,3 +1,5 @@
+> Historical batch record. SEO Batch C2 was accepted and merged as PR #17; later guarded production releases carried the resulting changes live. Statements below about a Draft PR or production not being deployed describe the boundary of that original batch, not the current repository state.
+
 # SEO Batch C2 — Amosfot Tools hub backlink
 
 - Starting main: `7646dc20f27e4ffa6c9015009549acee8f70ae88`

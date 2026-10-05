@@ -1,3 +1,5 @@
+> Historical batch record. SEO Batch A was accepted and merged as PR #14; later guarded production releases carried the resulting changes live. Statements below about a Draft PR or production not being deployed describe the boundary of that original batch, not the current repository state.
+
 # SEO Batch A — Homepage Search Hardening
 Branch: `phase-seo-a/homepage-hardening`.
 Purpose: strengthen honest homepage search intent, search-result identity, metadata, structured data, first-party OG presentation, crawler verification, and crawlable portfolio discovery.

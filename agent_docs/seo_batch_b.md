@@ -1,3 +1,5 @@
+> Historical batch record. SEO Batch B was accepted and merged as PR #16; later guarded production releases carried the resulting changes live. Statements below about a Draft PR or production not being deployed describe the boundary of that original batch, not the current repository state.
+
 # SEO Batch B — Supporting Search Guides
 
 - Branch: phase-seo-b/supporting-guides
