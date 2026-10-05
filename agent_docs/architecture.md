@@ -8,15 +8,20 @@
 - Compared text, comparison state, result rows, export strings, and option snapshots remain transient. The only approved persistence is the non-sensitive `private-text-compare-theme` value (`dark` or `light`).
 - Copy remains explicit clipboard write only; downloads remain local Blob/object-URL actions. No compared text or export payload is sent to an application backend, persisted, logged, or encoded in URLs.
 
-## Launch content and SEO
+## Current search, content, and SEO
 
-- `astro.config.mjs` defines the production site as `https://textcompare.amosfot.in`; this drives deterministic production canonical/social site identity at build time.
-- `BaseLayout.astro` derives both the homepage canonical and the single `WebSite` JSON-LD URL from `Astro.site`, avoiding a second hardcoded production-host value in the layout.
-- The accepted Phase 1D metadata remains deliberately narrow: exact title/description, canonical, Open Graph, Twitter summary metadata, favicon linkage, and exactly one `WebSite` JSON-LD object. There is no FAQPage, SoftwareApplication, rating/review, offer, SearchAction, meta keywords, Search Console token, or Open Graph image.
-- `public/robots.txt` allows crawling and points to `https://textcompare.amosfot.in/sitemap.xml`; `public/sitemap.xml` contains only `https://textcompare.amosfot.in/`.
-- The earlier `https://compare.amosfot.in/` value was a Phase 1D plan only, was never activated, and is superseded.
-- Product HTML contains no meta noindex. PR previews remain protected by deployment-layer `X-Robots-Tag: noindex`; production is indexable.
-- Cloudflare Managed robots.txt is disabled for this deployment arrangement so the repository-owned `public/robots.txt` is the authoritative crawler policy. Production release verification checks the live response against that exact approved repository policy.
+- The branded production origin is https://textcompare.amosfot.in/.
+- The homepage targets honest text-comparison/diff-checker intent and uses WebSite + WebApplication structured data.
+- Two static supporting guides are live:
+  - /guides/compare-two-texts/
+  - /guides/line-vs-word-diff/
+- Guide pages use WebSite + WebPage + BreadcrumbList structured data and are never described as separate applications.
+- robots.txt and sitemap.xml are generated for the branded production origin; the sitemap contains the homepage plus the two guide URLs.
+- Homepage and guides carry first-party Open Graph presentation and production canonical metadata.
+- The homepage and both guides expose one crawlable Amosfot Tools link while preserving the existing cross-tool links.
+- PR previews remain response-layer noindex while keeping production canonical identity. Production is indexable.
+- Cloudflare Managed robots.txt remains disabled for this deployment arrangement so the repository-owned robots policy stays authoritative.
+- The superseded compare.amosfot.in plan must not be reintroduced.
 
 ## Visual system and assets
 
@@ -108,12 +113,11 @@ After the domain is ACTIVE, production verification requires homepage HTTP 200/c
 
 The r2 release exposed a live `robots.txt` mismatch caused by Cloudflare Managed robots.txt. That managed feature was disabled for this deployment arrangement so repository `public/robots.txt` remains authoritative. The accepted r3 release then passed the complete HTTPS, canonical, structured-data, crawling-assets, sitemap, and indexability gate.
 
-## Accepted production state
+## Current production state
 
-- Phase 1E is complete and accepted.
-- Live URL: `https://textcompare.amosfot.in/`.
-- Accepted code SHA: `c500ef51ebe749cb5efff369174e10417cd0a871`.
-- Accepted release run: `32136540410`.
-- Accepted deployment: `0ea179a9-74bf-4ee1-bf17-a9d4286a541c` / `https://0ea179a9.private-text-compare.pages.dev`.
-- Android production QA was subsequently reported passed by the user.
-- MVP functionality through production launch is complete; future product work remains separately scoped and explicitly approved.
+- Latest verified production release target before this documentation reconciliation: c71648799c6694765f2bd8fb1d097b32f61848d2.
+- Latest verified guarded production run: 33224830603.
+- Latest immutable deployment: https://a62856aa.private-text-compare.pages.dev.
+- Raw Cloudflare provenance verified environment=production, branch=main, commit=c71648799c6694765f2bd8fb1d097b32f61848d2.
+- The public origin https://textcompare.amosfot.in/ passed branded homepage, guide, canonical, structured-data, crawler-asset, sitemap, hub-backlink, and indexability checks.
+- The original Phase 1E launch history remains useful historical context, but this later SEO-integrated release is the current production generation.
