@@ -28,3 +28,7 @@ There are no known product release blockers. Ads, analytics, accounts, backend s
 No new Private Text Compare feature phase is planned. Preserve the tool as a stable portfolio product unless user/search evidence justifies maintenance or a bounded enhancement.
 
 Portfolio-wide next steps live in AltamashM7/amosfot-tools. Opportunity research for tool #4 is documented there but intentionally not started in this reconciliation.
+
+## Current dependency-security maintenance note
+
+A fresh October 2026 PR verification now fails at the repository's existing npm audit gate because newly published advisories affect the pinned dependency graph, including a critical Astro advisory and additional transitive/development advisories. The documentation changes did not introduce these vulnerabilities. Do not weaken or bypass the audit gate; resolve them in a separate bounded dependency-security maintenance batch before beginning tool #4 development.
